@@ -315,3 +315,15 @@ def calcular_comparativo(oferta, taxa, meses):
 #====================================================================
 #                 FUNCOES DE FORMATACAO E EXIBICAO
 #====================================================================
+
+#exibe valores em reais (moedas)
+def formatar_moeda(valor):
+    texto = f"{valor:,.2f}"
+    texto = texto.replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R${texto}"
+
+#formata um percentual com duas casas decimais
+def formatar_percentual(valor):
+    return f"{valor:.2f}%".replace(".", ",")
+
+#exibição das ofertas por marcas
