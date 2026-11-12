@@ -281,6 +281,37 @@ def simular_juros_compostos(valor, taxa, meses):
 
         return resultados
 
+#compara o valor inicial + o total
 def calcular_total_prazo(oferta):
-    
-    total_prazo = 0
+    """Compara a entrada + (numero de parcelas X valor de cada parcela)."""
+    return round(
+        oferta["entrada"] + oferta["parcelas"] * oferta["valor_parcela"], 
+        2
+    )
+
+#compara o valor, o total parcelado e a projecao hipotetica com o valor k
+def calcular_comparativo(oferta, taxa, meses):
+    total_prazo = calcular_total_prazo(oferta)
+    diferenca = round(total_prazo - oferta["valor_vista"], 2)
+
+    if oferta["valor_vista"] > 0:
+        percentual = (diferenca / oferta["valor_vista"]) * 100
+    else:
+        percentual = 0.0
+
+    simulacao = simular_juros_compostos(oferta["valor_vista"], taxa, meses)
+    montante_k = simulacao[-1]["saldo"]
+    juros_k = montante_k - oferta["valor_vista"]
+
+    return{
+        "total_prazo": total_prazo,
+        "diferenca": diferenca,
+        "percentual": percentual,
+        "montante_k": montante_k,
+        "juros_k": juros_k
+    }
+
+
+#====================================================================
+#                 FUNCOES DE FORMATACAO E EXIBICAO
+#====================================================================
