@@ -1,5 +1,5 @@
 #módulo do terceiro integrante do grupo
-k = 10
+K = 10
 
 #Espécie de "banco de dados"
 ofertas = [
@@ -279,7 +279,7 @@ def simular_juros_compostos(valor, taxa, meses):
             "juros_acumulados": juros_acumulados
         })
 
-        return resultados
+    return resultados
 
 #compara o valor inicial + o total
 def calcular_total_prazo(oferta):
@@ -300,7 +300,7 @@ def calcular_comparativo(oferta, taxa, meses):
         percentual = 0.0
 
     simulacao = simular_juros_compostos(oferta["valor_vista"], taxa, meses)
-    montante_k = simulacao[-1]["saldo"]
+    montante_k = simulacao[-1]["saldo"] if simulacao else oferta["valor_vista"]
     juros_k = montante_k - oferta["valor_vista"]
 
     return{
@@ -326,4 +326,108 @@ def formatar_moeda(valor):
 def formatar_percentual(valor):
     return f"{valor:.2f}%".replace(".", ",")
 
-#exibição das ofertas por marcas
+#exibição das ofertas por marcas comparando prazo e taxa
+def exibir_comparativo(ofertas, taxa, meses):
+    print("\n" + "=" * 150)
+    print("PROJETO 15 - COMPARADOR DE SMARTPHONES")
+    print(f"K = {K} | Taxa hipotetica = {taxa}% ao mes | Prazo da simulacao = {meses} meses")
+    print("=" * 150)
+    print("Diferenca = total calculado das parcelas - preco-base exibido.")
+    print("Montante K = preco-base atualizado hipoteticamente pela taxa K durante o prazo K.")
+    print("A diferenca nominal nao comprova, por si so, a cobranca de juros pela loja.\n")
+
+    marcas = ["Samsung", "Apple", "Xiaomi"]
+
+    for marca in marcas:
+        print("\n" + "-" * 150)
+        print(f"Marca: {marca.upper()}")
+        print("-" * 150)
+        cabecalho = (
+            f"{'Plataforma':<16} {'Modelo':<34} {'Preco-base':>14} "
+            f"{'Plano':>19} {'Total prazo':>14} {'Dif. nominal':>14} "
+            f"{'Dif. %':>9} {'Montante k':>14} "
+        )
+        print(cabecalho)
+        print("." * 150)
+
+        for oferta in ofertas:
+            if oferta["marca"] != marca:
+                continue
+
+            comp = calcular_comparativo(oferta, taxa, meses)
+            plano = f"{oferta['parcelas']} x {formatar_moeda(oferta['valor_parcela'])}"
+            modelo = oferta["modelo"]
+            if len(modelo) > 34:
+                modelo = modelo[:31] + "..."
+
+            print(
+                f"{oferta['plataforma']:<16} {modelo:<34} "
+                f"{formatar_moeda(oferta['valor_vista']):>14} "
+                f"{plano:>19} {formatar_moeda(comp['total_prazo']):>14} "
+                f"{formatar_moeda(comp['diferenca']):>14} "
+                f"{formatar_percentual(comp['percentual']):>9} "
+                f"{formatar_moeda(comp['montante_k']):>14}"
+            )
+            print(f"   Condicao: {oferta['condicao']} | Preco-base: {oferta['referencia_preco']}")
+
+            if oferta["observacao"]:
+                print(f"  Observacao: {oferta['observacao']}")
+
+
+#simulacao mensal
+def exibir_simulacao_mensal(oferta, taxa, meses):
+    resultados = simular_juros_compostos(oferta["valor_vista"], taxa, meses)
+
+    print("\n" + "=" * 92)
+    print("======= |SIMULACAO DETALHADA DE JUROS COMPOSTOS PELO K| =======")
+    print(f"Produto: {oferta['marca']} {oferta['modelo']}")
+    print(f"Preco-base: {formatar_moeda(oferta['valor_vista'])}")
+    print(f"Taxa: {taxa}% ao mes | Prazo: {meses}meses")
+    print("=" * 92)
+    print(f"{'Mes':>5} {'Saldo atualizado':>22} {'Juros do mes':>20} {'Juros acumulados':>22}")
+
+    for item in resultados:
+        print(
+            f"{item['mes']:>5} "
+            f"{formatar_moeda(item['saldo']):>22} "
+            f"{formatar_moeda(item['juros_mes']):>20} "
+            f"{formatar_moeda(item['juros_acumulados']):>22}"
+        )
+
+    saldo_final = resultados[-1]["saldo"] if resultados else oferta["valor_vista"]
+    juros_totais = resultados[-1]["juros_acumulados"] if resultados else 0.0
+    print("-" * 92)
+    print(f"Montante final simulado: {formatar_moeda(saldo_final)}")
+    print(f"Juros totais simulados: {formatar_moeda(juros_totais)}")
+
+
+
+
+#====================================================================
+#                    EXECUCAO E DEMONSTRACAO
+#====================================================================
+
+def main():
+    """Executa o relatorio comparativo e uma simulacao mensal de exemplo."""
+    taxa, meses = calcular_parametros_k(K)
+
+    print(f"PARAMETROS DO GRUPO: K={K}, taxa={taxa}% ao mes, prazo={meses} meses")
+    print(f"Quantidade de registros de ofertas: {len(ofertas)}")
+
+    exibir_comparativo(ofertas, taxa, meses)
+
+    # Demonstra a simulacao mensal usando a primeira oferta coletada.
+    # Para escolher outra, altere o indice abaixo (0 = primeira oferta).
+    exibir_simulacao_mensal(ofertas[0], taxa, meses)
+
+
+    print("\nIMPORTANTE PARA A DOCUMENTACAO:")
+    print("1. Confirme os precos, vendedores, links, frete e data nas capturas originais.")
+    print("2. Valores com divergencia entre parcelas e total anunciado foram sinalizados.")
+    print("3. A simulacao K e hipotetica e nao representa a taxa real das lojas.")
+    print("4. Compare diretamente apenas o mesmo modelo, armazenamento e condicao de venda.")
+    print("5. Os resultados foram exibidos no terminal; nenhuma biblioteca.")
+
+
+if __name__ == "__main__":
+    main()
