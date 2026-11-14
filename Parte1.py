@@ -1,22 +1,55 @@
-def cadastrar_oferta():
-    nome = input('Informe o nome da loja:')
-    produto = input('Informe o produto:')
-    preco = float(input('Informe o preço do produto:'))
-    entrada = float(input('Valor da 1° parcela:'))
-    quant_parcelas = int(input('Número de parcelas:'))
-    valor_parcelas = float(input('Informe o valor de cada parcela:'))
+def ler_int_positivo(mensagem): #Lê número inteiro positivo e maior que 0 e repete até ser válido
+    while True:
+        try:
+            valor = int(input(mensagem))
+        except ValueError:
+            print('Entrada inválida! Digite um número inteiro')
+            continue
 
-    return {
-        'nome': nome,
+        if valor <= 0:
+            print('O valor deve ser maior que zero')
+        else:
+            return valor
+
+
+def ler_float_positivo(mensagem, permitir_zero=False): #[IA] Lê número decimal positivo e repete até ser válido
+    while True:
+        try:
+            valor = float(input (mensagem).replace(',','.'))
+        except ValueError:
+            print('Entrada inválida! Digite apenas números')
+            continue
+
+        if valor < 0:
+            print('O valor não pode ser negativo')
+        elif valor == 0 and not permitir_zero:
+            print('O valor não pode ser zero')
+        else:
+            return valor                            #[IA]
+
+
+def cadastrar_oferta(ofertas):  #Cadastra ofertas e adiciona na lista
+    loja = input('Informe o nome da loja:')
+    produto = input('Informe o produto:')
+    valor_vista = ler_float_positivo('Preço à vista: R$')
+    entrada = ler_float_positivo('Valor da entrada (0 se não tiver): R$', permitir_zero=True)
+    parcelas = ler_int_positivo('Número de parcelas:')
+    valor_parcela = ler_float_positivo('Informe o valor de cada parcela: R$')
+
+    oferta = {
+        'loja': loja,
         'produto': produto,
-        'preco': preco,
+        'valor_vista': valor_vista,
         'entrada': entrada,
-        'quant_parcelas': quant_parcelas,
-        'valor_parcelas': valor_parcelas,
+        'parcelas': parcelas,
+        'valor_parcela': valor_parcela,
     }
+    ofertas.append(oferta)
+    print('Oferta cadastrada!')
+
 
 def menu():
-    oferta = None
+    oferta = []
 
     while True:
         print('\n--- MENU ---')
@@ -27,18 +60,17 @@ def menu():
         opcao = input('Escolha uma opção:')
 
         if opcao == '1':
-            oferta = cadastrar_oferta()
-            print('Oferta cadastrada!')
+            cadastrar_oferta(oferta)
 
-        elif opcao == '2':                            #[IA]
-            if oferta is None:
+        elif opcao == '2':                            
+            if not oferta:
                 print('Nenhuma oferta cadastrada ainda')
-            else:
-                print(f"\nLoja: {oferta['nome']}")
-                print(f"Produto: {oferta['produto']}")
-                print(f"Preço: R$ {oferta['preco']:.2f}")
-                print(f"Entrada: R$ {oferta['entrada']:.2f}")
-                print(f"Parcelas: {oferta['quant_parcelas']}x de R$ {oferta['valor_parcelas']:.2f}")                                  #[IA]
+            else: #[IA]            
+                for i, o in enumerate(oferta, start=1):
+                    print(f"{i}. {o['loja']} - {o['produto']} |"
+                          f"À vista R$ {o['valor_vista']:.2f} |"
+                          f"Entrada R$ {o['entrada']:.2f} + "
+                          f"{o['parcelas']} x R$ {o['valor_parcela']:.2f}") #[IA]
 
         elif opcao == '0':
             print('Saindo...')
@@ -48,3 +80,4 @@ def menu():
             print('Opção inválida')
 
 menu()
+
