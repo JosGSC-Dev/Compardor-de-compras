@@ -838,73 +838,115 @@ def simular_faixa_parcelas(plataforma, preco_base, entrada, limite_parcelas, lim
 
 
 # Autor: [Nome do integrante responsavel]
+
+# Autor: [Seu nome]
 def executar_simulacao_avulsa():
-    """Recebe os dados de um aparelho e compara as medias das tres plataformas."""
-    print("\nSIMULACAO AVULSA COM MEDIAS DA PESQUISA")
-    modelo = ler_texto("Nome/modelo do smartphone: ")
-    preco_base = ler_float("Preco-base normal no cartao (R$): ", 0.0, False)
-    entrada = ler_float("Entrada (R$; digite 0 se nao houver): ", 0.0, True)
+    """Simula uma compra independente da base de ofertas reais."""
+
+    print("\nSIMULACAO AVULSA DE SMARTPHONE")
+
+    # 1. Receber os dados do aparelho
+    modelo = ler_texto("Nome do smartphone: ")
+
+    preco_base = ler_float(
+        "Preco-base no cartao (R$): ", 0.0, False
+    )
+
+    entrada = ler_float(
+        "Valor da entrada (R$): ", 0.0, True
+    )
+
     if entrada >= preco_base:
         print("A entrada deve ser menor que o preco-base.")
         return
-    limite_parcelas = ler_inteiro("Quantidade maxima de parcelas a analisar (1 a 48): ", 1, 48)
-    limite_mensal = ler_float("Limite que pode pagar por mes (0 se nao quiser filtrar): R$ ", 0.0, True)
 
-    print("\nProduto:", modelo)
-    print("Preco-base B:", formatar_moeda(preco_base))
-    print("Entrada:", formatar_moeda(entrada))
-    print("Prazos analisados: de 1 ate", limite_parcelas, "parcelas")
-    print("\nATENCAO: as medias devem vir das pesquisas reais do grupo.")
+    # 2. Permitir escolher somente uma plataforma
+    print("\nESCOLHA A PLATAFORMA")
 
-    todas_as_simulacoes = []
-    for plataforma in PLATAFORMAS:
-        resultados = simular_faixa_parcelas(
-            plataforma, preco_base, entrada, limite_parcelas, limite_mensal
-        )
-        for resultado in resultados:
-            todas_as_simulacoes.append(resultado)
+    for indice in range(len(PLATAFORMAS)):
+        print(indice + 1, "-", PLATAFORMAS[indice])
 
-    if len(todas_as_simulacoes) == 0:
-        print("Nenhuma simulacao foi realizada. Preencha as amostras de taxas no inicio do codigo.")
+    escolha = ler_inteiro(
+        "Escolha a loja: ", 1, len(PLATAFORMAS)
+    )
+
+    plataforma = PLATAFORMAS[escolha - 1]
+
+    # 3. Receber a quantidade exata de parcelas
+    parcelas = ler_inteiro(
+        "Quantidade de parcelas: ", 1, 48
+    )
+
+    print("\nPROCESSANDO SIMULACAO...")
+
+    # 4. Calcular usando a media pesquisada da loja
+    resultado = simular_condicao_plataforma(
+        plataforma,
+        preco_base,
+        entrada,
+        parcelas
+    )
+
+    if resultado is None:
+        print("\nTaxa media ainda nao cadastrada para esta loja.")
+        print("Preencha AMOSTRAS_TAXAS_MENSAIS no codigo.")
         return
 
-    # O menor custo total e diferente da menor parcela mensal.
-    menor_total = todas_as_simulacoes[0]
-    menor_parcela = todas_as_simulacoes[0]
-    for registro in todas_as_simulacoes[1:]:
-        if registro["total"] < menor_total["total"]:
-            menor_total = registro
-        if registro["parcela"] < menor_parcela["parcela"]:
-            menor_parcela = registro
+    # 5. Apresentar os resultados
+    print("\n" + "=" * 55)
+    print("RESULTADO DA SIMULACAO")
+    print("=" * 55)
 
-    print("\nMENOR TOTAL ENTRE TODOS OS PRAZOS SIMULADOS:")
-    print(
-        menor_total["plataforma"], "-", menor_total["parcelas"], "parcelas de",
-        formatar_moeda(menor_total["parcela"]), "- total", formatar_moeda(menor_total["total"])
-    )
-    print("MENOR PARCELA MENSAL:")
-    print(
-        menor_parcela["plataforma"], "-", menor_parcela["parcelas"], "parcelas de",
-        formatar_moeda(menor_parcela["parcela"]), "- total", formatar_moeda(menor_parcela["total"])
-    )
-    if limite_mensal > 0:
-        planos_compativeis = []
-        for registro in todas_as_simulacoes:
-            if registro["parcela"] <= limite_mensal:
-                planos_compativeis.append(registro)
-        if planos_compativeis:
-            melhor_compativel = planos_compativeis[0]
-            for registro in planos_compativeis[1:]:
-                if registro["total"] < melhor_compativel["total"]:
-                    melhor_compativel = registro
-            print("MELHOR CUSTO ENTRE OS PLANOS QUE CABEM NO ORCAMENTO:")
-            print(
-                melhor_compativel["plataforma"], "-", melhor_compativel["parcelas"],
-                "parcelas - total", formatar_moeda(melhor_compativel["total"])
-            )
+    print("Smartphone:", modelo)
+    print("Plataforma:", plataforma)
+    print("Preco-base:", formatar_moeda(preco_base))
+    print("Entrada:", formatar_moeda(entrada))
+    print("Capital financiado:", formatar_moeda(preco_base - entrada))
 
-    print("\nInterpretacao: a menor parcela mensal nao significa o menor custo total.")
-    print("A simulacao usa medias da amostra pesquisada, nao uma taxa universal da plataforma.")
+    print(
+        "Taxa mensal estimada:",
+        formatar_percentual(resultado["taxa_media"])
+    )
+
+    print("Quantidade de parcelas:", parcelas)
+
+    print(
+        "Valor de cada parcela:",
+        formatar_moeda(resultado["valor_parcela"])
+    )
+
+    print(
+        "Total parcelado:",
+        formatar_moeda(resultado["total_parcelado"])
+    )
+
+    print(
+        "Juros/acrescimo estimado:",
+        formatar_moeda(resultado["acrescimo_sobre_base"])
+    )
+
+    print(
+        "Percentual de acrescimo:",
+        formatar_percentual(
+            resultado["acrescimo_sobre_base"] / preco_base * 100
+        )
+    )
+
+    if resultado["preco_pix"] is not None:
+        print(
+            "Preco estimado no Pix:",
+            formatar_moeda(resultado["preco_pix"])
+        )
+
+        print(
+            "Diferenca entre parcelado e Pix:",
+            formatar_moeda(resultado["diferenca_vs_pix"])
+        )
+    else:
+        print("Desconto Pix medio ainda nao cadastrado.")
+
+    print("=" * 55)
+    print("Simulacao baseada nas medias da pesquisa do grupo.")
 
 
 # =====================================================================
@@ -912,7 +954,7 @@ def executar_simulacao_avulsa():
 # =====================================================================
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def calcular_parametros_k(k):
     """Calcula taxa mensal e prazo conforme as formulas do professor."""
     if not isinstance(k, int) or k < 0:
@@ -922,7 +964,7 @@ def calcular_parametros_k(k):
     return taxa, meses
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def simular_juros_compostos(valor, taxa, meses):
     """Simula juros compostos com for, sem operador de potencia ou pow()."""
     if valor <= 0:
@@ -948,7 +990,7 @@ def simular_juros_compostos(valor, taxa, meses):
     return resultados
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def executar_projecao_k():
     """Solicita smartphone e capital, aplicando somente taxa e prazo do K."""
     print("\nPROJECAO HIPOTETICA COM K")
@@ -981,7 +1023,7 @@ def executar_projecao_k():
 # =====================================================================
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def exibir_menu():
     """Mostra as quatro opcoes principais do sistema."""
     print("\n" + "=" * 66)
@@ -994,7 +1036,7 @@ def exibir_menu():
     print("=" * 66)
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def executar_comparacao_real():
     """Executa a opcao 1 usando a base de ofertas reais cadastradas."""
     ofertas = carregar_ofertas_reais()
@@ -1006,7 +1048,7 @@ def executar_comparacao_real():
     exibir_comparacao_real(ofertas_modelo)
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def main():
     """Controla o menu principal ate o usuario escolher sair."""
     while True:
@@ -1030,7 +1072,7 @@ def main():
 # =====================================================================
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def executar_testes_basicos():
     """Executa verificacoes simples das funcoes matematicas do pre-codigo."""
     # Teste do K = 10: taxa 1% e prazo 10 meses.
@@ -1051,7 +1093,7 @@ def executar_testes_basicos():
     parcela_com_juros = calcular_parcela_simulada(1200.00, 0.00, 2.0, 12)
     assert parcela_com_juros * 12 > 1200.00
 
-    # Teste da taxa implicita: R$ 1.000 financiados em 10 parcelas de R$ 110.
+    # Teste da taxa implicita
     taxa_estimada = calcular_taxa_implicita(1000.00, 0.00, 10, 110.00)
     assert taxa_estimada is not None and taxa_estimada > 0
 
