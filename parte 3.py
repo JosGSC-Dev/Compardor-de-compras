@@ -32,6 +32,7 @@ Nao use taxas inventadas como se fossem taxas oficiais das plataformas.
 # [IA] Este pre-codigo foi estruturado com apoio de IA. O grupo deve revisar,
 # testar, compreender e adaptar todas as funcoes antes da entrega.
 """
+import csv
 
 K = 10
 
@@ -644,7 +645,7 @@ def exibir_comparacao_real(ofertas_modelo):
 # =====================================================================
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def calcular_media(valores):
     """Calcula a media aritmetica usando acumulador e laco for."""
     if len(valores) == 0:
@@ -779,7 +780,7 @@ def simular_condicao_plataforma(plataforma, preco_base, entrada, parcelas):
     }
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 def simular_faixa_parcelas(plataforma, preco_base, entrada, limite_parcelas, limite_mensal):
     """Mostra prazos de 1 ate o limite e identifica o primeiro que cabe no orcamento."""
     taxa_media = obter_media_taxa(plataforma)
@@ -837,7 +838,7 @@ def simular_faixa_parcelas(plataforma, preco_base, entrada, limite_parcelas, lim
     return resultados
 
 
-# Autor: [Nome do integrante responsavel]
+# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
 
 # Autor: [Seu nome]
 def executar_simulacao_avulsa():
