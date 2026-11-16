@@ -1,3 +1,4 @@
+#Autor: Pedro Vitor
 #Lê número inteiro positivo e maior que 0 e repete até ser válido
 def ler_int_positivo(mensagem): 
     while True:
@@ -103,4 +104,3 @@ def menu():
             print('Opção inválida')
 
 menu()
-
