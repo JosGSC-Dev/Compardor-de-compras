@@ -296,3 +296,4 @@ if __name__ == "__main__":
     ]
     exibir_tabela(empate)
     exibir_resumo(empate)
+
