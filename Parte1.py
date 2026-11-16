@@ -1,4 +1,5 @@
-def ler_int_positivo(mensagem): #Lê número inteiro positivo e maior que 0 e repete até ser válido
+#Lê número inteiro positivo e maior que 0 e repete até ser válido
+def ler_int_positivo(mensagem): 
     while True:
         try:
             valor = int(input(mensagem))
@@ -12,7 +13,8 @@ def ler_int_positivo(mensagem): #Lê número inteiro positivo e maior que 0 e re
             return valor
 
 
-def ler_float_positivo(mensagem, permitir_zero=False): #[IA] Lê número decimal positivo e repete até ser válido
+#[IA] Lê número decimal positivo e repete até ser válido
+def ler_float_positivo(mensagem, permitir_zero=False):
     while True:
         try:
             valor = float(input (mensagem).replace(',','.'))
@@ -25,10 +27,11 @@ def ler_float_positivo(mensagem, permitir_zero=False): #[IA] Lê número decimal
         elif valor == 0 and not permitir_zero:
             print('O valor não pode ser zero')
         else:
-            return valor                            #[IA]
+            return valor                           
 
 
-def cadastrar_oferta(ofertas):  #Cadastra ofertas e adiciona na lista
+#Cadastra ofertas e adiciona na lista
+def cadastrar_oferta(ofertas): 
     loja = input('Informe o nome da loja:')
     produto = input('Informe o produto:')
     valor_vista = ler_float_positivo('Preço à vista: R$')
