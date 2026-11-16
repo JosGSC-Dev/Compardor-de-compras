@@ -754,6 +754,16 @@ def executar_simulacao_avulsa():
     print("- O desconto Pix e uma media das amostras cadastradas pelo grupo.")
     print("- A menor parcela mensal nao significa o menor custo total.")
 
+#[IA]
+def abrir_interface_grafica():
+    """Executa a opcao 4: abre a interface grafica (tkinter)."""
+    import sys
+    try:
+        from interface_tkinter import abrir_interface
+    except ImportError:
+        print("Nao foi possivel abrir a interface grafica (tkinter ou interface_tkinter.py ausente).")
+        return
+    abrir_interface(sys.modules[__name__])
 
 def exibir_menu():
     """Mostra o menu principal com as tres funcionalidades do projeto."""
@@ -763,6 +773,7 @@ def exibir_menu():
     print("1 - Comparar ofertas reais cadastradas")
     print("2 - Simular parcelamento (banco + plataforma)")
     print("3 - Fazer projecao hipotetica com K")
+    print("4 - Abrir interface grafica")
     print("0 - Sair")
     print("=" * 66)
 
@@ -778,6 +789,8 @@ def main():
             executar_simulacao_avulsa()
         elif opcao == "3":
             executar_projecao_k()
+        elif opcao == "4":
+            abrir_interface_grafica()
         elif opcao == "0":
             print("Programa encerrado.")
             break
