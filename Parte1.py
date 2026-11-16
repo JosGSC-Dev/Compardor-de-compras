@@ -35,9 +35,29 @@ def cadastrar_oferta(ofertas):
     loja = input('Informe o nome da loja:')
     produto = input('Informe o produto:')
     valor_vista = ler_float_positivo('Preço à vista: R$')
-    entrada = ler_float_positivo('Valor da entrada (0 se não tiver): R$', permitir_zero=True)
+
+#Entrada tem que ser menor que o valor à vista
+    while True:
+        entrada = ler_float_positivo('Valor da entrada (0 se não tiver): R$', permitir_zero=True)
+
+        if entrada >= valor_vista:
+            print('A entrada deve ser menor que o preço à vista.')
+        else:
+            break
+    
     parcelas = ler_int_positivo('Número de parcelas:')
-    valor_parcela = ler_float_positivo('Informe o valor de cada parcela: R$')
+
+#Total a prazo não pode ser menor que o valor à vista
+    margem = parcelas * 0.01
+    while True:
+        valor_parcela = ler_float_positivo('Valor de cada parcela: R$')
+        total_prazo = entrada + parcelas * valor_parcela
+        if total_prazo + margem < valor_vista:
+            minimo = (valor_vista - entrada) / parcelas
+            print(f'Total a prazo (R$ {total_prazo:.2f}) menor que o preço à vista')
+            print(f'Cada parcela deve ser de pelo menos R$ {minimo:.2f}')
+        else:
+            break
 
     oferta = {
         'loja': loja,
