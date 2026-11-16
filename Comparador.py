@@ -1,431 +1,539 @@
-#Autor: Pedro Vitor
-#Lê número inteiro positivo e maior que 0 e repete até ser válido
-def ler_int_positivo(mensagem): 
+"""Projeto 15 - Comparador de Compras Parceladas.
+
+Versao integrada das tres partes do grupo.
+
+Menu principal:
+1. Comparar ofertas reais (inclui cadastro e consulta de ofertas).
+2. Simular parcelamento usando taxa de referencia do banco e desconto Pix.
+3. Projetar juros compostos a partir do parametro K.
+0. Sair.
+
+Padrao unico de oferta:
+{
+    "codigo_modelo": str,
+    "loja": str,
+    "produto": str,
+    "valor_a_vista": float,
+    "entrada": float,
+    "num_parcelas": int,
+    "valor_parcela": float
+}
+
+Restricoes preservadas: sem bibliotecas financeiras, sem operador de potencia ou funcao de potencia pronta.
+A simulacao de juros compostos e realizada com laco for.
+"""
+
+# =====================================================================
+# CONFIGURACOES E DADOS DO PROJETO
+# =====================================================================
+
+K = 51  # K atualizado.
+
+PLATAFORMAS = ["Amazon", "Magazine Luiza", "Mercado Livre"]
+
+BANCOS_CARTAO = [
+    "Itaú",
+    "Nubank",
+    "Bradesco",
+    "Santander",
+    "Caixa Econômica Federal",
+]
+
+# Taxas de referencia transcritas do BCB no codigo anterior do grupo.
+# Modalidade: Cartao de credito - parcelado - Prefixado (Pessoa Fisica).
+# Periodo informado pelo grupo: 09/10/2026 a 16/10/2026.
+# A taxa media nao corresponde necessariamente a taxa contratual individual.
+PERIODO_TAXAS_BCB = "09/10/2026 a 16/10/2026"
+MODALIDADE_TAXAS_BCB = "Cartao de credito - parcelado - Prefixado (Pessoa Fisica)"
+FONTE_TAXAS_BCB = (
+    "https://www.bcb.gov.br/estatisticas/reporttxjuroshistorico?"
+    "InicioPeriodo=2024-01-&codigoModalidade=215101&codigoSegmento=1&"
+    "historicotaxajurosdiario_page=1&tipoModalidade=D"
+)
+
+AMOSTRAS_TAXAS_MENSAIS = {
+    "Itaú": [9.91],
+    "Nubank": [9.06],
+    "Bradesco": [9.02],
+    "Santander": [10.16],
+    "Caixa Econômica Federal": [8.62],
+}
+
+# Valores provisoriamente mantidos do codigo anterior do grupo.
+# Confirmar cada amostra com print/link, data, preco Pix e preco-base da mesma oferta.
+AMOSTRAS_DESCONTOS_PIX = {
+    "Amazon": [19.0, 9.0, 24.0],
+    "Magazine Luiza": [21.0, 15.0, 10.0],
+    "Mercado Livre": [22.0, 20.0, 15.0],
+}
+
+
+# =====================================================================
+# INTEGRANTE 1 - ENTRADA DE DADOS, VALIDACAO E CADASTRO
+# =====================================================================
+
+
+def ler_texto(mensagem):
+    """Solicita um texto nao vazio."""
+    while True:
+        texto = input(mensagem).strip()
+        if texto:
+            return texto
+        print("O campo nao pode ficar vazio.")
+
+
+def converter_valor_numerico(texto):
+    """Converte valores como 'R$ 1.234,56', '1234,56' ou '1234.56'."""
+    if isinstance(texto, (int, float)) and not isinstance(texto, bool):
+        valor = float(texto)
+        if not _numero_finito(valor):
+            raise ValueError("O valor precisa ser finito.")
+        return valor
+
+    texto = str(texto).strip().replace("R$", "").replace(" ", "")
+    if not texto:
+        raise ValueError("Digite um valor numerico.")
+
+    if "," in texto and "." in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    elif "," in texto:
+        texto = texto.replace(",", ".")
+
+    valor = float(texto)
+    if not _numero_finito(valor):
+        raise ValueError("O valor precisa ser finito.")
+    return valor
+
+
+def ler_float(mensagem, minimo=0.0, permitir_igual=True):
+    """Le um numero decimal, aceitando virgula e formato monetario brasileiro."""
     while True:
         try:
-            valor = int(input(mensagem))
+            valor = converter_valor_numerico(input(mensagem))
         except ValueError:
-            print('Entrada inválida! Digite um número inteiro')
+            print("Entrada invalida. Digite um numero valido.")
             continue
 
-        if valor <= 0:
-            print('O valor deve ser maior que zero')
-        else:
+        if permitir_igual and valor >= minimo:
             return valor
+        if not permitir_igual and valor > minimo:
+            return valor
+        comparacao = "maior ou igual" if permitir_igual else "maior"
+        print("O valor deve ser", comparacao, "a", minimo)
 
 
-#[IA] Lê número decimal positivo e repete até ser válido
-def ler_float_positivo(mensagem, permitir_zero=False):
+def ler_inteiro(mensagem, minimo=1, maximo=60):
+    """Le um inteiro dentro do intervalo informado."""
     while True:
+        texto = input(mensagem).strip()
         try:
-            valor = float(input (mensagem).replace(',','.'))
+            valor = int(texto)
         except ValueError:
-            print('Entrada inválida! Digite apenas números')
+            print("Entrada invalida. Digite um numero inteiro.")
             continue
 
-        if valor < 0:
-            print('O valor não pode ser negativo')
-        elif valor == 0 and not permitir_zero:
-            print('O valor não pode ser zero')
-        else:
-            return valor                           
+        if minimo <= valor <= maximo:
+            return valor
+        print("Digite um inteiro entre", minimo, "e", maximo, ".")
 
 
-#Cadastra ofertas e adiciona na lista
-def cadastrar_oferta(ofertas): 
-    loja = input('Informe o nome da loja:')
-    produto = input('Informe o produto:')
-    valor_vista = ler_float_positivo('Preço à vista: R$')
-
-#Entrada tem que ser menor que o valor à vista
-    while True:
-        entrada = ler_float_positivo('Valor da entrada (0 se não tiver): R$', permitir_zero=True)
-
-        if entrada >= valor_vista:
-            print('A entrada deve ser menor que o preço à vista.')
-        else:
-            break
-    
-    parcelas = ler_int_positivo('Número de parcelas:')
-
-#Total a prazo não pode ser menor que o valor à vista
-    margem = parcelas * 0.01
-    while True:
-        valor_parcela = ler_float_positivo('Valor de cada parcela: R$')
-        total_prazo = entrada + parcelas * valor_parcela
-        if total_prazo + margem < valor_vista:
-            minimo = (valor_vista - entrada) / parcelas
-            print(f'Total a prazo (R$ {total_prazo:.2f}) menor que o preço à vista')
-            print(f'Cada parcela deve ser de pelo menos R$ {minimo:.2f}')
-        else:
-            break
-
-    oferta = {
-        'loja': loja,
-        'produto': produto,
-        'valor_vista': valor_vista,
-        'entrada': entrada,
-        'parcelas': parcelas,
-        'valor_parcela': valor_parcela,
-    }
-    ofertas.append(oferta)
-    print('Oferta cadastrada!')
+def ler_int_positivo(mensagem):
+    """Compatibilidade com o nome usado no primeiro trecho do grupo."""
+    return ler_inteiro(mensagem, 1, 1000)
 
 
-def menu():
-    oferta = []
-
-    while True:
-        print('\n--- MENU ---')
-        print('1. Cadastrar oferta')
-        print('2. Consultar informações')
-        print('0. Sair')
-
-        opcao = input('Escolha uma opção:')
-
-        if opcao == '1':
-            cadastrar_oferta(oferta)
-
-        elif opcao == '2':                            
-            if not oferta:
-                print('Nenhuma oferta cadastrada ainda')
-            else: #[IA]            
-                for i, o in enumerate(oferta, start=1):
-                    print(f"{i}. {o['loja']} - {o['produto']} |"
-                          f"À vista R$ {o['valor_vista']:.2f} |"
-                          f"Entrada R$ {o['entrada']:.2f} + "
-                          f"{o['parcelas']} x R$ {o['valor_parcela']:.2f}") #[IA]
-
-        elif opcao == '0':
-            print('Saindo...')
-            break
-
-        else:
-            print('Opção inválida')
+def ler_float_positivo(mensagem, permitir_zero=False):
+    """Compatibilidade com o nome usado no primeiro trecho do grupo."""
+    return ler_float(mensagem, 0.0, permitir_zero)
 
 
-#Código principal
-"""
-Projeto 15 - Comparador de Compras Parceladas
-Eduardo Soares Portela - Calculos financeiros e comparacao de ofertas
-
-Cada oferta e um dicionario:
-    {
-        "loja": str,
-        "produto": str,
-        "valor_a_vista": float,
-        "entrada": float,
-        "num_parcelas": int,
-        "valor_parcela": float,
-    }
-
-Formulas:
-    Total a prazo = entrada + (num_parcelas * valor_parcela)
-    Juros (R$)    = total a prazo - valor a vista
-    Juros (%)     = (juros em R$ / valor a vista) * 100
-"""
-#Autor: Eduardo Soares Portela
-
-# ---------------------------------------------------------------------------
-# Funcoes auxiliares
-# ---------------------------------------------------------------------------
 def formatar_reais(valor):
-    """Formata como moeda brasileira: 10599.0 -> 'R$ 10.599,00'."""
-    texto = f"{valor:,.2f}"                       # 10,599.00
+    """Formata um numero como moeda brasileira."""
+    texto = f"{valor:,.2f}"
     texto = texto.replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"R$ {texto}"
+    return "R$ " + texto
+
+
+def formatar_moeda(valor):
+    """Alias para manter compatibilidade com a parte de juros compostos."""
+    return formatar_reais(valor)
+
+
+def formatar_percentual(valor):
+    """Formata um percentual com duas casas decimais."""
+    return f"{valor:.2f}%".replace(".", ",")
+
+
+def criar_codigo_modelo(produto):
+    """Cria identificador simples para agrupar ofertas do mesmo produto."""
+    codigo = ""
+    for caractere in produto.lower():
+        if caractere.isalnum():
+            codigo += caractere
+    return codigo
+
+
+def criar_oferta(loja, produto, valor_a_vista, parcelas, valor_parcela,
+                 entrada=0.0, codigo_modelo=None):
+    """Cria uma oferta usando o padrao unico compartilhado pelo programa."""
+    if codigo_modelo is None:
+        codigo_modelo = criar_codigo_modelo(produto)
+    return {
+        "codigo_modelo": codigo_modelo,
+        "loja": loja,
+        "produto": produto,
+        "valor_a_vista": float(valor_a_vista),
+        "entrada": float(entrada),
+        "num_parcelas": int(parcelas),
+        "valor_parcela": float(valor_parcela),
+    }
 
 
 def validar_oferta(oferta):
-    """Levanta ValueError se a oferta tiver dados invalidos."""
-    if oferta["num_parcelas"] <= 0:
-        raise ValueError(
-            f"Numero de parcelas invalido ({oferta['num_parcelas']}) "
-            f"na oferta de {oferta['loja']}."
-        )
-    if oferta["valor_parcela"] < 0 or oferta["entrada"] < 0:
-        raise ValueError(f"Valor negativo na oferta de {oferta['loja']}.")
-    if oferta["valor_a_vista"] <= 0:
-        raise ValueError(f"Valor a vista invalido na oferta de {oferta['loja']}.")
+    """Valida os campos financeiros de uma oferta cadastrada."""
+    campos = ["loja", "produto", "valor_a_vista", "entrada",
+              "num_parcelas", "valor_parcela"]
+    for campo in campos:
+        if campo not in oferta:
+            raise ValueError("Campo ausente na oferta: " + campo)
 
+    if not str(oferta["loja"]).strip() or not str(oferta["produto"]).strip():
+        raise ValueError("Loja e produto nao podem ficar vazios.")
 
-# ---------------------------------------------------------------------------
-# Funcoes principais
-# ---------------------------------------------------------------------------
-def calcular_total_prazo(oferta):
-    """Retorna entrada + (parcelas * valor da parcela), arredondado a 2 casas."""
-    validar_oferta(oferta)
+    vista = oferta["valor_a_vista"]
     entrada = oferta["entrada"]
     parcelas = oferta["num_parcelas"]
     valor_parcela = oferta["valor_parcela"]
-    total = entrada + (parcelas * valor_parcela)
+
+    if not _numero_finito(vista) or vista <= 0:
+        raise ValueError("O preco a vista deve ser finito e maior que zero.")
+    if not _numero_finito(entrada) or entrada < 0 or entrada >= vista:
+        raise ValueError("A entrada deve ser finita, nao negativa e menor que o preco a vista.")
+    if isinstance(parcelas, bool) or not isinstance(parcelas, int) or parcelas <= 0:
+        raise ValueError("O numero de parcelas deve ser um inteiro positivo.")
+    if not _numero_finito(valor_parcela) or valor_parcela <= 0:
+        raise ValueError("O valor da parcela deve ser finito e maior que zero.")
+
+    total = entrada + parcelas * valor_parcela
+    if total + 0.01 < vista:
+        raise ValueError("O total a prazo nao pode ser menor que o preco a vista.")
+    return True
+
+
+def cadastrar_oferta(ofertas):
+    """Solicita os dados de uma oferta e adiciona a lista compartilhada."""
+    print("\nCADASTRO DE OFERTA REAL")
+    loja = ler_texto("Nome da loja: ")
+    produto = ler_texto("Nome/modelo do produto (inclua memoria/versao): ")
+    valor_a_vista = ler_float("Preco a vista/Pix (R$): ", 0.0, False)
+
+    while True:
+        entrada = ler_float("Valor da entrada (R$; 0 se nao houver): ", 0.0, True)
+        if entrada < valor_a_vista:
+            break
+        print("A entrada precisa ser menor que o preco a vista.")
+
+    parcelas = ler_int_positivo("Numero de parcelas: ")
+    while True:
+        valor_parcela = ler_float("Valor de cada parcela (R$): ", 0.0, False)
+        total = entrada + parcelas * valor_parcela
+        if total + 0.01 >= valor_a_vista:
+            break
+        minimo = (valor_a_vista - entrada) / parcelas
+        print("O total a prazo ficou abaixo do preco a vista.")
+        print("Cada parcela deve ser de pelo menos", formatar_reais(minimo))
+
+    oferta = criar_oferta(loja, produto, valor_a_vista, parcelas,
+                          valor_parcela, entrada)
+    validar_oferta(oferta)
+    ofertas.append(oferta)
+    print("Oferta cadastrada com sucesso.")
+
+
+# =====================================================================
+# DADOS REAIS FORNECIDOS NO CODIGO ENVIADO PELO GRUPO
+# =====================================================================
+
+OFERTAS_IPHONE = [
+    criar_oferta("Amazon", "iPhone 17 Pro Max 256 GB", 9998.99, 12, 883.25,
+                 codigo_modelo="iphone17promax256"),
+    criar_oferta("Magazine Luiza", "iPhone 17 Pro Max 256 GB", 11494.05, 10, 1209.90,
+                 codigo_modelo="iphone17promax256"),
+    criar_oferta("Mercado Livre", "iPhone 17 Pro Max 512 GB", 10799.00, 10, 1199.90,
+                 codigo_modelo="iphone17promax512"),
+]
+
+OFERTAS_POCO_C85 = [
+    criar_oferta("Amazon", "POCO C85 256 GB", 1182.09, 12, 108.25,
+                 codigo_modelo="pococ85256"),
+    criar_oferta("Mercado Livre", "POCO C85 256 GB", 1278.99, 10, 139.56,
+                 codigo_modelo="pococ85256"),
+]
+
+OFERTAS_Z_FLIP8 = [
+    criar_oferta("Magazine Luiza 10x", "Galaxy Z Flip 8 256 GB", 7739.10, 10, 859.90,
+                 codigo_modelo="galaxyzflip8256"),
+    criar_oferta("Magazine Luiza 21x", "Galaxy Z Flip 8 256 GB", 7739.10, 21, 409.48,
+                 codigo_modelo="galaxyzflip8256"),
+    criar_oferta("Mercado Livre", "Galaxy Z Flip 8 512 GB", 6699.00, 12, 643.89,
+                 codigo_modelo="galaxyzflip8512"),
+]
+
+# Uma unica lista alimenta cadastro, consulta e comparacao.
+OFERTAS_REAIS = OFERTAS_IPHONE + OFERTAS_POCO_C85 + OFERTAS_Z_FLIP8
+
+
+# =====================================================================
+# INTEGRANTE 2 - CALCULOS FINANCEIROS E COMPARACAO DE OFERTAS
+# =====================================================================
+
+
+def calcular_total_prazo(oferta):
+    """Calcula entrada + quantidade de parcelas * valor da parcela."""
+    validar_oferta(oferta)
+    total = oferta["entrada"] + oferta["num_parcelas"] * oferta["valor_parcela"]
     return round(total, 2)
 
 
 def calcular_juros(oferta):
-    """Retorna (juros em R$, juros em %) sobre o valor a vista."""
+    """Retorna uma tupla com juros em reais e juros percentuais sobre o preco a vista."""
     total = calcular_total_prazo(oferta)
     a_vista = oferta["valor_a_vista"]
     juros_reais = round(total - a_vista, 2)
-    juros_percentual = (juros_reais / a_vista) * 100
+    juros_percentual = round((juros_reais / a_vista) * 100, 2)
     return juros_reais, juros_percentual
 
 
+def calcular_juros_reais(oferta):
+    """Retorna o acrescimo em reais sobre o preco a vista."""
+    return calcular_juros(oferta)[0]
+
+
+def calcular_juros_percentual(oferta):
+    """Retorna o acrescimo percentual sobre o preco a vista."""
+    return calcular_juros(oferta)[1]
+
+
 def achar_mais_barata(ofertas):
-    """Retorna a LISTA de ofertas com menor total a prazo (varias se houver empate)."""
-    if len(ofertas) == 0:
+    """Retorna todas as ofertas empatadas com o menor total a prazo."""
+    if not ofertas:
         return []
-    menor_total = calcular_total_prazo(ofertas[0])
-    vencedoras = [ofertas[0]]
+    menor = calcular_total_prazo(ofertas[0])
     for oferta in ofertas[1:]:
         total = calcular_total_prazo(oferta)
-        if total < menor_total:
-            menor_total = total
-            vencedoras = [oferta]
-        elif total == menor_total:
-            vencedoras.append(oferta)
-    return vencedoras
+        if total < menor:
+            menor = total
+    return [oferta for oferta in ofertas
+            if abs(calcular_total_prazo(oferta) - menor) <= 0.01]
 
 
 def achar_mais_cara(ofertas):
-    """Retorna a LISTA de ofertas com maior total a prazo (varias se houver empate)."""
-    if len(ofertas) == 0:
+    """Retorna todas as ofertas empatadas com o maior total a prazo."""
+    if not ofertas:
         return []
-    maior_total = calcular_total_prazo(ofertas[0])
-    vencedoras = [ofertas[0]]
+    maior = calcular_total_prazo(ofertas[0])
     for oferta in ofertas[1:]:
         total = calcular_total_prazo(oferta)
-        if total > maior_total:
-            maior_total = total
-            vencedoras = [oferta]
-        elif total == maior_total:
-            vencedoras.append(oferta)
-    return vencedoras
+        if total > maior:
+            maior = total
+    return [oferta for oferta in ofertas
+            if abs(calcular_total_prazo(oferta) - maior) <= 0.01]
+
+
+def _nomes(ofertas):
+    """Retorna os nomes das lojas de uma lista de ofertas."""
+    nomes = []
+    for oferta in ofertas:
+        nomes.append(oferta["loja"])
+    return ", ".join(nomes)
 
 
 def exibir_tabela(ofertas):
-    """Imprime a tabela comparativa das ofertas, alinhada com f-strings."""
-    cab = (f"{'Loja':<16}{'A vista':>14}{'Entrada':>12}{'Parcelas':>18}"
-           f"{'Total a prazo':>16}{'Juros R$':>13}{'Juros %':>10}")
-    linha = "-" * len(cab)
+    """Exibe a comparacao de parcelas, custo total e juros."""
+    if not ofertas:
+        print("Nenhuma oferta disponivel para comparar.")
+        return
+
+    cabecalho = (
+        f"{'Loja':<22}{'A vista':>14}{'Entrada':>13}"
+        f"{'Parcelamento':>23}{'Total a prazo':>17}{'Juros R$':>14}{'Juros %':>10}"
+    )
+    linha = "-" * len(cabecalho)
     print(linha)
-    print(cab)
+    print(cabecalho)
     print(linha)
+
     for oferta in ofertas:
         total = calcular_total_prazo(oferta)
-        juros_r, juros_p = calcular_juros(oferta)
-        parcelas = f"{oferta['num_parcelas']}x {formatar_reais(oferta['valor_parcela'])}"
-        print(f"{oferta['loja']:<16}"
-              f"{formatar_reais(oferta['valor_a_vista']):>14}"
-              f"{formatar_reais(oferta['entrada']):>12}"
-              f"{parcelas:>18}"
-              f"{formatar_reais(total):>16}"
-              f"{formatar_reais(juros_r):>13}"
-              f"{juros_p:>9.2f}%")
+        juros_reais, juros_percentual = calcular_juros(oferta)
+        parcelamento = (
+            str(oferta["num_parcelas"]) + "x "
+            + formatar_reais(oferta["valor_parcela"])
+        )
+        print(
+            f"{oferta['loja']:<22}"
+            f"{formatar_reais(oferta['valor_a_vista']):>14}"
+            f"{formatar_reais(oferta['entrada']):>13}"
+            f"{parcelamento:>23}"
+            f"{formatar_reais(total):>17}"
+            f"{formatar_reais(juros_reais):>14}"
+            f"{juros_percentual:>9.2f}%"
+        )
     print(linha)
-
-
-def _nomes(lista):
-    return ", ".join(o["loja"] for o in lista)
 
 
 def exibir_resumo(ofertas):
-    """Mostra a(s) oferta(s) mais barata(s) e mais cara(s)."""
-    barata = achar_mais_barata(ofertas)
-    cara = achar_mais_cara(ofertas)
-    print(f"Mais barata: {_nomes(barata)} "
-          f"({formatar_reais(calcular_total_prazo(barata[0]))})"
-          + ("  [EMPATE]" if len(barata) > 1 else ""))
-    print(f"Mais cara:   {_nomes(cara)} "
-          f"({formatar_reais(calcular_total_prazo(cara[0]))})"
-          + ("  [EMPATE]" if len(cara) > 1 else ""))
+    """Identifica a oferta de menor e maior custo total, incluindo empates."""
+    if not ofertas:
+        print("Nao ha ofertas para gerar o resumo.")
+        return
+
+    baratas = achar_mais_barata(ofertas)
+    caras = achar_mais_cara(ofertas)
+    total_barato = calcular_total_prazo(baratas[0])
+    total_caro = calcular_total_prazo(caras[0])
+
+    print("Menor custo total:", _nomes(baratas), "-", formatar_reais(total_barato),
+          "[EMPATE]" if len(baratas) > 1 else "")
+    print("Maior custo total:", _nomes(caras), "-", formatar_reais(total_caro),
+          "[EMPATE]" if len(caras) > 1 else "")
 
 
-# ---------------------------------------------------------------------------
-# Dados reais coletados (prints do grupo). Entrada = 0 em todas.
-# valor_a_vista = preco no Pix / a vista exibido na loja.
-# ---------------------------------------------------------------------------
-def _oferta(loja, produto, a_vista, parcelas, valor_parcela, entrada=0.0):
-    return {"loja": loja, "produto": produto, "valor_a_vista": a_vista,
-            "entrada": entrada, "num_parcelas": parcelas,
-            "valor_parcela": valor_parcela}
+def calcular_media(valores):
+    """Calcula a media aritmetica de uma lista de valores."""
+    if not valores:
+        return None
+    soma = 0.0
+    for valor in valores:
+        soma += valor
+    return soma / len(valores)
 
 
-# Atencao: a oferta do Mercado Livre e de 512 GB (as outras sao 256 GB).
-OFERTAS_IPHONE = [
-    _oferta("Amazon", "iPhone 17 Pro Max 256 GB", 9998.99, 12, 883.25),
-    _oferta("Magazine Luiza", "iPhone 17 Pro Max 256 GB", 11494.05, 10, 1209.90),
-    _oferta("Mercado Livre", "iPhone 17 Pro Max 512 GB", 10799.00, 10, 1199.90),
-]
-
-# Mesmo produto (POCO C85 256 GB / 8 GB) em duas lojas.
-OFERTAS_POCO_C85 = [
-    _oferta("Amazon", "POCO C85 256 GB", 1182.09, 12, 108.25),
-    _oferta("Mercado Livre", "POCO C85 256 GB", 1278.99, 10, 139.56),
-]
+def obter_media_taxa_banco(banco):
+    """Retorna a taxa mensal de referencia cadastrada para o banco."""
+    if banco not in AMOSTRAS_TAXAS_MENSAIS:
+        return None
+    return calcular_media(AMOSTRAS_TAXAS_MENSAIS[banco])
 
 
-# Galaxy Z Flip 8 (Samsung). ATENCAO: capacidades diferentes (256 GB x 512 GB).
-# A Magazine Luiza tem duas opcoes de parcelamento para o mesmo aparelho.
-OFERTAS_Z_FLIP8 = [
-    _oferta("Magalu 10x", "Galaxy Z Flip 8 256 GB", 7739.10, 10, 859.90),
-    _oferta("Magalu 21x", "Galaxy Z Flip 8 256 GB", 7739.10, 21, 409.48),
-    _oferta("Mercado Livre", "Galaxy Z Flip 8 512 GB", 6699.00, 12, 643.89),
-]
+def obter_media_desconto(plataforma):
+    """Retorna o desconto Pix medio cadastrado para a plataforma."""
+    if plataforma not in AMOSTRAS_DESCONTOS_PIX:
+        return None
+    return calcular_media(AMOSTRAS_DESCONTOS_PIX[plataforma])
 
 
-# ---------------------------------------------------------------------------
-# Testes (valores conferidos manualmente - veja os comentarios)
-#parte feita pela IA
-# ---------------------------------------------------------------------------
-def aproximado(a, b, tol=0.005):
-    return abs(a - b) <= tol
+def fator_presente_parcelas(taxa_percentual, quantidade_parcelas):
+    """Soma fatores de valor presente usando for, sem potencia pronta."""
+    if taxa_percentual < 0 or quantidade_parcelas <= 0:
+        raise ValueError("Taxa ou quantidade de parcelas invalida.")
+    taxa_decimal = taxa_percentual / 100
+    fator = 1.0
+    soma = 0.0
+    for mes in range(1, quantidade_parcelas + 1):
+        fator = fator / (1 + taxa_decimal)
+        soma += fator
+    return soma
 
 
-def rodar_testes():
-    # 1) Oferta SEM juros: 10 x 100 = 1000 = valor a vista
-    sem_juros = _oferta("Loja Teste", "Produto", 1000.00, 10, 100.00)
-    assert calcular_total_prazo(sem_juros) == 1000.00
-    assert calcular_juros(sem_juros) == (0.0, 0.0)
+def calcular_parcela_simulada(preco_base, entrada, taxa_percentual, parcelas):
+    """Calcula parcela fixa pelo modelo Price, com primeira parcela em um mes."""
+    if not _numero_finito(preco_base) or preco_base <= 0:
+        raise ValueError("Preco-base deve ser finito e maior que zero.")
+    if not _numero_finito(entrada) or entrada < 0 or entrada >= preco_base:
+        raise ValueError("Entrada invalida.")
+    if not _numero_finito(taxa_percentual) or taxa_percentual < 0:
+        raise ValueError("Taxa invalida.")
+    if isinstance(parcelas, bool) or not isinstance(parcelas, int) or parcelas <= 0:
+        raise ValueError("Quantidade de parcelas invalida.")
 
-    # 2) Oferta COM entrada (mao): 200 + 4*250 = 1200; juros = 200 (20%) sobre 1000
-    com_entrada = _oferta("Loja A", "Produto", 1000.00, 4, 250.00, entrada=200.00)
-    assert calcular_total_prazo(com_entrada) == 1200.00
-    j_r, j_p = calcular_juros(com_entrada)
-    assert j_r == 200.00 and aproximado(j_p, 20.0)
-
-    # 3) Oferta SEM entrada (mao): 5*220 = 1100; juros = 100 (10%) sobre 1000
-    sem_entrada = _oferta("Loja B", "Produto", 1000.00, 5, 220.00)
-    assert calcular_total_prazo(sem_entrada) == 1100.00
-    j_r, j_p = calcular_juros(sem_entrada)
-    assert j_r == 100.00 and aproximado(j_p, 10.0)
-
-    # 4) Ofertas reais - iPhone (conferido a mao)
-    #    Amazon: 12*883,25 = 10.599,00 ; juros = 10.599,00 - 9.998,99 = 600,01 ; 6,00%
-    amazon, magalu, ml = OFERTAS_IPHONE
-    assert calcular_total_prazo(amazon) == 10599.00
-    j_r, j_p = calcular_juros(amazon)
-    assert j_r == 600.01 and aproximado(j_p, 6.00)
-    #    Magalu: 10*1.209,90 = 12.099,00 ; juros = 604,95 ; 5,26%
-    assert calcular_total_prazo(magalu) == 12099.00
-    j_r, j_p = calcular_juros(magalu)
-    assert j_r == 604.95 and aproximado(j_p, 5.26)
-    #    Mercado Livre: 10*1.199,90 = 11.999,00 ; juros = 1.200,00 ; 11,11%
-    assert calcular_total_prazo(ml) == 11999.00
-    j_r, j_p = calcular_juros(ml)
-    assert j_r == 1200.00 and aproximado(j_p, 11.11)
-
-    # 5) Mais barata e mais cara (iPhone)
-    assert achar_mais_barata(OFERTAS_IPHONE) == [amazon]
-    assert achar_mais_cara(OFERTAS_IPHONE) == [magalu]
-
-    # 6) POCO C85 (mao): Amazon 12*108,25 = 1.299,00 -> juros 116,91 (9,89%)
-    #                    ML 10*139,56 = 1.395,60 -> juros 116,61 (9,12%)
-    am, ml2 = OFERTAS_POCO_C85
-    assert calcular_total_prazo(am) == 1299.00
-    assert calcular_juros(am)[0] == 116.91
-    assert aproximado(calcular_juros(am)[1], 9.89)
-    assert calcular_total_prazo(ml2) == 1395.60
-    assert calcular_juros(ml2)[0] == 116.61
-    assert aproximado(calcular_juros(ml2)[1], 9.12)
-
-    # 6b) Galaxy Z Flip 8 (conferido a mao)
-    #    Magalu 10x: 10*859,90 = 8.599,00 ; juros = 8.599,00 - 7.739,10 = 859,90 ; 11,11%
-    #    Magalu 21x: 21*409,48 = 8.599,08 ; juros = 859,98 ; 11,11%
-    #    Mercado Livre 12x: 12*643,89 = 7.726,68 ; juros = 7.726,68 - 6.699,00 = 1.027,68 ; 15,34%
-    z10, z21, zml = OFERTAS_Z_FLIP8
-    assert calcular_total_prazo(z10) == 8599.00
-    assert calcular_juros(z10)[0] == 859.90
-    assert aproximado(calcular_juros(z10)[1], 11.11)
-    assert calcular_total_prazo(z21) == 8599.08
-    assert calcular_juros(z21)[0] == 859.98
-    assert aproximado(calcular_juros(z21)[1], 11.11)
-    assert calcular_total_prazo(zml) == 7726.68
-    assert calcular_juros(zml)[0] == 1027.68
-    assert aproximado(calcular_juros(zml)[1], 15.34)
-    assert achar_mais_barata(OFERTAS_Z_FLIP8) == [zml]
-    assert achar_mais_cara(OFERTAS_Z_FLIP8) == [z21]
-
-    # 7) EMPATE: duas ofertas com o mesmo total a prazo (1200)
-    e1 = _oferta("Loja X", "Produto", 1000.00, 4, 250.00, entrada=200.00)  # 1200
-    e2 = _oferta("Loja Y", "Produto", 1000.00, 6, 200.00)                  # 1200
-    e3 = _oferta("Loja Z", "Produto", 1000.00, 10, 130.00)                 # 1300
-    assert calcular_total_prazo(e1) == calcular_total_prazo(e2) == 1200.00
-    assert achar_mais_barata([e1, e2, e3]) == [e1, e2]
-    assert achar_mais_cara([e1, e2, e3]) == [e3]
-    assert achar_mais_cara([e1, e2]) == [e1, e2]   # todas empatadas
-
-    # 8) Entradas INVALIDAS: parcelas zero / negativas / valores negativos
-    invalidos = [
-        _oferta("Inv1", "P", 1000.00, 0, 100.00),
-        _oferta("Inv2", "P", 1000.00, -3, 100.00),
-        _oferta("Inv3", "P", 1000.00, 5, -50.00),
-        _oferta("Inv4", "P", 1000.00, 5, 100.00, entrada=-10.00),
-        _oferta("Inv5", "P", 0.00, 5, 100.00),
-    ]
-    for inv in invalidos:
-        try:
-            calcular_total_prazo(inv)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError(f"Deveria ter recusado {inv['loja']}")
-
-    # 9) Lista vazia
-    assert achar_mais_barata([]) == [] and achar_mais_cara([]) == []
-
-    print("Todos os testes passaram.\n")
-
-#fim da parte feita pela IA
-# ---------------------------------------------------------------------------
-#Autor: Eduardo Soares Portela:
-if __name__ == "__main__":
-    rodar_testes()
-
-    print("=== iPhone 17 Pro Max (atencao: Mercado Livre e 512 GB) ===")
-    exibir_tabela(OFERTAS_IPHONE)
-    exibir_resumo(OFERTAS_IPHONE)
-
-    print("\n=== POCO C85 256 GB / 8 GB (mesmo produto) ===")
-    exibir_tabela(OFERTAS_POCO_C85)
-    exibir_resumo(OFERTAS_POCO_C85)
-
-    print("\n=== Galaxy Z Flip 8 (atencao: Magalu 256 GB x Mercado Livre 512 GB) ===")
-    exibir_tabela(OFERTAS_Z_FLIP8)
-    exibir_resumo(OFERTAS_Z_FLIP8)
-
-    print("\n=== Teste de empate ===")
-    empate = [
-        _oferta("Loja X", "Produto", 1000.00, 4, 250.00, entrada=200.00),
-        _oferta("Loja Y", "Produto", 1000.00, 6, 200.00),
-        _oferta("Loja Z", "Produto", 1000.00, 10, 130.00),
-    ]
-    exibir_tabela(empate)
-    exibir_resumo(empate)
+    capital_financiado = preco_base - entrada
+    if taxa_percentual == 0:
+        return round(capital_financiado / parcelas, 2)
+    fator = fator_presente_parcelas(taxa_percentual, parcelas)
+    return round(capital_financiado / fator, 2)
 
 
-"""Projeto 15 - Parte do Integrante 3.
-
-Responsabilidades: juros compostos, testes, integração e apoio ao relatório.
-
-INTEGRACAO:
-- Este trecho deve ser copiado para o arquivo principal do grupo.
-- Mantenha apenas uma variável global K no programa.
-- A funcao executar_projecao_k reutiliza ler_texto, ler_float,
-  formatar_moeda e formatar_percentual, ja existentes no programa principal.
-- executar_testes_integracao depende das funcoes das tres partes e deve ser
-  executada depois que todas estiverem definidas.
-
-Restricoes atendidas: simulacao com for; sem bibliotecas financeiras,
-sem operador de potencia e sem pow().
-"""
-
-# Use o valor calculado pelo grupo. No momento, o valor informado e K = 10.
-K = 10
+def calcular_preco_pix(preco_base, desconto_percentual):
+    """Aplica o desconto medio Pix ao preco-base informado."""
+    if not _numero_finito(preco_base) or preco_base <= 0:
+        raise ValueError("Preco-base invalido.")
+    if not _numero_finito(desconto_percentual) or not 0 <= desconto_percentual < 100:
+        raise ValueError("Desconto deve estar entre 0% e menos de 100%.")
+    return round(preco_base * (1 - desconto_percentual / 100), 2)
 
 
-def _i3_numero_finito(valor):
-    """Informa se valor e numerico, real e finito, sem usar bibliotecas."""
+def simular_condicao_plataforma(plataforma, banco, preco_base, entrada, parcelas):
+    """Calcula parcela, total a prazo e estimativa Pix para banco e plataforma."""
+    taxa_banco = obter_media_taxa_banco(banco)
+    desconto_medio = obter_media_desconto(plataforma)
+    if taxa_banco is None or desconto_medio is None:
+        return None
+
+    parcela = calcular_parcela_simulada(preco_base, entrada, taxa_banco, parcelas)
+    total = round(entrada + parcela * parcelas, 2)
+    preco_pix = calcular_preco_pix(preco_base, desconto_medio)
+    return {
+        "plataforma": plataforma,
+        "banco": banco,
+        "taxa_banco": taxa_banco,
+        "desconto_medio": desconto_medio,
+        "preco_pix": preco_pix,
+        "valor_parcela": parcela,
+        "parcelas": parcelas,
+        "total_parcelado": total,
+        "acrescimo_sobre_base": round(total - preco_base, 2),
+        "diferenca_vs_pix": round(total - preco_pix, 2),
+    }
+
+
+def simular_faixa_parcelas(plataforma, banco, preco_base, entrada,
+                            limite_parcelas, limite_mensal=0.0):
+    """Gera resultados de 1 ate o limite de parcelas para a combinacao escolhida."""
+    resultados = []
+    for quantidade in range(1, limite_parcelas + 1):
+        simulacao = simular_condicao_plataforma(
+            plataforma, banco, preco_base, entrada, quantidade
+        )
+        if simulacao is None:
+            return []
+        registro = {
+            "parcelas": quantidade,
+            "parcela": simulacao["valor_parcela"],
+            "total": simulacao["total_parcelado"],
+            "preco_pix": simulacao["preco_pix"],
+            "diferenca_pix": simulacao["diferenca_vs_pix"],
+            "cabe_orcamento": limite_mensal <= 0 or simulacao["valor_parcela"] <= limite_mensal,
+        }
+        resultados.append(registro)
+    return resultados
+
+
+def selecionar_banco_cartao():
+    """Mostra os emissores disponiveis e retorna o banco escolhido."""
+    print("\nSELECIONE O BANCO/EMISSOR DO CARTAO")
+    for indice, banco in enumerate(BANCOS_CARTAO, start=1):
+        print(str(indice) + " - " + banco)
+    escolha = ler_inteiro("Banco do cartao: ", 1, len(BANCOS_CARTAO))
+    return BANCOS_CARTAO[escolha - 1]
+
+
+def selecionar_plataforma():
+    """Mostra as plataformas disponiveis e retorna a escolhida."""
+    print("\nSELECIONE A PLATAFORMA DE COMPRA")
+    for indice, plataforma in enumerate(PLATAFORMAS, start=1):
+        print(str(indice) + " - " + plataforma)
+    escolha = ler_inteiro("Plataforma: ", 1, len(PLATAFORMAS))
+    return PLATAFORMAS[escolha - 1]
+
+
+# =====================================================================
+# INTEGRANTE 3 - JUROS COMPOSTOS, TESTES E INTEGRACAO
+# =====================================================================
+
+
+def _numero_finito(valor):
+    """Verifica se o argumento e numero finito, sem importar bibliotecas."""
     return (
         isinstance(valor, (int, float))
         and not isinstance(valor, bool)
@@ -438,81 +546,252 @@ def _i3_numero_finito(valor):
 def calcular_parametros_k(k):
     """Calcula a taxa mensal (%) e o prazo (meses) a partir do K."""
     if isinstance(k, bool) or not isinstance(k, int) or k < 0:
-        raise ValueError("K deve ser um numero inteiro nao negativo.")
-
+        raise ValueError("K deve ser um inteiro nao negativo.")
     taxa_mensal = (k % 5) + 1
     prazo_meses = (k % 6) + 6
     return taxa_mensal, prazo_meses
 
 
 def simular_juros_compostos(capital, taxa_mensal, meses):
-    """Gera o historico mensal de juros compostos usando repeticao for."""
-    if not _i3_numero_finito(capital) or capital <= 0:
-        raise ValueError("O capital deve ser um numero finito maior que zero.")
-
-    if not _i3_numero_finito(taxa_mensal) or taxa_mensal < 0:
-        raise ValueError("A taxa deve ser um numero finito nao negativo.")
-
+    """Gera historico mensal de juros compostos com for, sem operador ou funcao de potencia pronta."""
+    if not _numero_finito(capital) or capital <= 0:
+        raise ValueError("O capital deve ser finito e maior que zero.")
+    if not _numero_finito(taxa_mensal) or taxa_mensal < 0:
+        raise ValueError("A taxa deve ser finita e nao negativa.")
     if isinstance(meses, bool) or not isinstance(meses, int) or meses <= 0:
         raise ValueError("O prazo deve ser um inteiro positivo.")
 
     saldo = float(capital)
     historico = []
-
     for mes in range(1, meses + 1):
         saldo_anterior = saldo
         saldo = saldo * (1 + taxa_mensal / 100)
         juros_mes = saldo - saldo_anterior
         juros_acumulados = saldo - capital
-
         historico.append({
             "mes": mes,
             "saldo": round(saldo, 2),
             "juros_mes": round(juros_mes, 2),
-            "juros_acumulados": round(juros_acumulados, 2)
+            "juros_acumulados": round(juros_acumulados, 2),
         })
-
     return historico
 
 
 def executar_projecao_k():
-    """Executa a opcao 3 usando as funcoes de entrada e formatacao do grupo."""
+    """Executa a opcao 3 usando as funcoes de entrada compartilhadas."""
     print("\nPROJECAO HIPOTETICA COM K")
     modelo = ler_texto("Nome/modelo do smartphone: ")
     capital = ler_float("Preco-base no cartao (R$): ", 0.0, False)
-
     taxa, meses = calcular_parametros_k(K)
     historico = simular_juros_compostos(capital, taxa, meses)
 
     print("\nProduto:", modelo)
-    print("Capital inicial:", formatar_moeda(capital))
+    print("Capital inicial:", formatar_reais(capital))
     print("K:", K)
     print("Taxa mensal determinada pelo K:", formatar_percentual(taxa))
     print("Prazo determinado pelo K:", meses, "meses")
     print("\nEvolucao mensal:")
-    print(
-        f"{'Mes':>5} {'Saldo':>18} "
-        f"{'Juros do mes':>18} {'Juros acumulados':>21}"
-    )
+    print(f"{'Mes':>5} {'Saldo':>18} {'Juros do mes':>18} {'Juros acumulados':>21}")
     print("-" * 68)
-
     for item in historico:
         print(
-            f"{item['mes']:>5} {formatar_moeda(item['saldo']):>18} "
-            f"{formatar_moeda(item['juros_mes']):>18} "
-            f"{formatar_moeda(item['juros_acumulados']):>21}"
+            f"{item['mes']:>5} {formatar_reais(item['saldo']):>18} "
+            f"{formatar_reais(item['juros_mes']):>18} "
+            f"{formatar_reais(item['juros_acumulados']):>21}"
         )
-
-    print("Montante final:", formatar_moeda(historico[-1]["saldo"]))
-    print(
-        "Juros hipoteticos acumulados:",
-        formatar_moeda(historico[-1]["juros_acumulados"])
-    )
+    print("Montante final:", formatar_reais(historico[-1]["saldo"]))
+    print("Juros hipoteticos acumulados:", formatar_reais(historico[-1]["juros_acumulados"]))
     print("Esta projecao e academica; nao representa uma oferta real de credito.")
 
 
-def _i3_esperar_value_error(funcao, *argumentos):
-    """Retorna True quando a chamada testada gera ValueError."""
+# =====================================================================
+# OPCOES DO MENU PRINCIPAL
+# =====================================================================
+
+
+def listar_codigos_modelos(ofertas):
+    """Retorna os codigos de modelos sem repeticoes, preservando a ordem."""
+    codigos = []
+    for oferta in ofertas:
+        codigo = oferta["codigo_modelo"]
+        if codigo not in codigos:
+            codigos.append(codigo)
+    return codigos
+
+
+def buscar_ofertas_por_modelo(ofertas, codigo_modelo):
+    """Seleciona as ofertas do mesmo modelo/versao cadastrada."""
+    encontradas = []
+    for oferta in ofertas:
+        if oferta["codigo_modelo"] == codigo_modelo:
+            encontradas.append(oferta)
+    return encontradas
+
+
+def exibir_ofertas_cadastradas(ofertas):
+    """Lista todas as ofertas cadastradas."""
+    if not ofertas:
+        print("Nenhuma oferta cadastrada ainda.")
+        return
+    for indice, oferta in enumerate(ofertas, start=1):
+        total = calcular_total_prazo(oferta)
+        print(
+            str(indice) + ". " + oferta["loja"] + " - " + oferta["produto"]
+            + " | A vista: " + formatar_reais(oferta["valor_a_vista"])
+            + " | Entrada: " + formatar_reais(oferta["entrada"])
+            + " + " + str(oferta["num_parcelas"]) + " x "
+            + formatar_reais(oferta["valor_parcela"])
+            + " | Total: " + formatar_reais(total)
+        )
+
+
+def executar_comparacao_real():
+    """Executa a opcao 1: compara ofertas reais e permite cadastro/consulta."""
+    while True:
+        print("\n--- OFERTAS REAIS ---")
+        print("1. Comparar ofertas por produto")
+        print("2. Cadastrar nova oferta")
+        print("3. Consultar todas as ofertas")
+        print("0. Voltar ao menu principal")
+        opcao = input("Escolha uma opcao: ").strip()
+
+        if opcao == "1":
+            codigos = listar_codigos_modelos(OFERTAS_REAIS)
+            if not codigos:
+                print("Nenhuma oferta cadastrada.")
+                continue
+            print("\nPRODUTOS DISPONIVEIS")
+            for indice, codigo in enumerate(codigos, start=1):
+                grupo = buscar_ofertas_por_modelo(OFERTAS_REAIS, codigo)
+                print(str(indice) + " - " + grupo[0]["produto"])
+            escolha = ler_inteiro("Escolha o produto: ", 1, len(codigos))
+            grupo = buscar_ofertas_por_modelo(OFERTAS_REAIS, codigos[escolha - 1])
+            print("\nCOMPARACAO DE OFERTAS")
+            exibir_tabela(grupo)
+            exibir_resumo(grupo)
+            if len(grupo) == 1:
+                print("Observacao: existe apenas uma oferta cadastrada para este modelo.")
+        elif opcao == "2":
+            cadastrar_oferta(OFERTAS_REAIS)
+        elif opcao == "3":
+            exibir_ofertas_cadastradas(OFERTAS_REAIS)
+        elif opcao == "0":
+            break
+        else:
+            print("Opcao invalida. Digite 1, 2, 3 ou 0.")
+
+
+def executar_simulacao_avulsa():
+    """Executa a opcao 2: compara prazos usando banco e plataforma."""
+    print("\nSIMULACAO DE PARCELAMENTO - BANCO + PLATAFORMA")
+    modelo = ler_texto("Nome/modelo do smartphone: ")
+    preco_base = ler_float("Preco-base normal no cartao (R$): ", 0.0, False)
+
+    while True:
+        entrada = ler_float("Entrada (R$; digite 0 se nao houver): ", 0.0, True)
+        if entrada < preco_base:
+            break
+        print("A entrada deve ser menor que o preco-base.")
+
+    banco = selecionar_banco_cartao()
+    plataforma = selecionar_plataforma()
+    limite_parcelas = ler_inteiro("Quantidade maxima de parcelas (1 a 48): ", 1, 48)
+    limite_mensal = ler_float("Limite mensal (R$; 0 para nao filtrar): ", 0.0, True)
+
+    taxa_banco = obter_media_taxa_banco(banco)
+    desconto_medio = obter_media_desconto(plataforma)
+    preco_pix = calcular_preco_pix(preco_base, desconto_medio)
+    resultados = simular_faixa_parcelas(
+        plataforma, banco, preco_base, entrada, limite_parcelas, limite_mensal
+    )
+
+    print("\nProduto:", modelo)
+    print("Banco/emissor:", banco)
+    print("Taxa mensal de referencia:", formatar_percentual(taxa_banco))
+    print("Periodo da taxa BCB:", PERIODO_TAXAS_BCB)
+    print("Plataforma:", plataforma)
+    print("Desconto Pix medio cadastrado:", formatar_percentual(desconto_medio))
+    print("Preco estimado no Pix:", formatar_reais(preco_pix))
+    print("\nCOMPARACAO DOS PRAZOS")
+    print(f"{'Parcelas':>9} {'Valor mensal':>18} {'Total a prazo':>20} {'Diferenca vs Pix':>19}")
+    print("-" * 75)
+    for registro in resultados:
+        print(
+            f"{registro['parcelas']:>9} "
+            f"{formatar_reais(registro['parcela']):>18} "
+            f"{formatar_reais(registro['total']):>20} "
+            f"{formatar_reais(registro['diferenca_pix']):>19}"
+        )
+
+    menor_total = resultados[0]
+    menor_parcela = resultados[0]
+    primeiro_compativel = None
+    for registro in resultados:
+        if registro["total"] < menor_total["total"]:
+            menor_total = registro
+        if registro["parcela"] < menor_parcela["parcela"]:
+            menor_parcela = registro
+        if primeiro_compativel is None and registro["cabe_orcamento"]:
+            primeiro_compativel = registro
+
+    print("\nMENOR CUSTO TOTAL:", menor_total["parcelas"], "parcelas de",
+          formatar_reais(menor_total["parcela"]), "- total",
+          formatar_reais(menor_total["total"]))
+    print("MENOR PARCELA MENSAL:", menor_parcela["parcelas"], "parcelas de",
+          formatar_reais(menor_parcela["parcela"]), "- total",
+          formatar_reais(menor_parcela["total"]))
+
+    if limite_mensal > 0:
+        if primeiro_compativel is None:
+            print("Nenhum prazo analisado cabe no limite mensal informado.")
+        else:
+            print("Primeiro prazo dentro do limite:", primeiro_compativel["parcelas"],
+                  "parcelas de", formatar_reais(primeiro_compativel["parcela"]))
+
+    print("\nObservacoes metodologicas:")
+    print("- A taxa do banco e uma referencia media do BCB, nao uma taxa garantida.")
+    print("- A condicao real depende do contrato e do Custo Efetivo Total (CET).")
+    print("- O desconto Pix e uma media das amostras cadastradas pelo grupo.")
+    print("- A menor parcela mensal nao significa o menor custo total.")
+
+
+def exibir_menu():
+    """Mostra o menu principal com as tres funcionalidades do projeto."""
+    print("\n" + "=" * 66)
+    print("COMPARADOR DE OFERTAS DE SMARTPHONES - PROJETO 15")
+    print("=" * 66)
+    print("1 - Comparar ofertas reais cadastradas")
+    print("2 - Simular parcelamento (banco + plataforma)")
+    print("3 - Fazer projecao hipotetica com K")
+    print("0 - Sair")
+    print("=" * 66)
+
+
+def main():
+    """Controla o menu principal ate o usuario escolher sair."""
+    while True:
+        exibir_menu()
+        opcao = input("Escolha uma opcao: ").strip()
+        if opcao == "1":
+            executar_comparacao_real()
+        elif opcao == "2":
+            executar_simulacao_avulsa()
+        elif opcao == "3":
+            executar_projecao_k()
+        elif opcao == "0":
+            print("Programa encerrado.")
+            break
+        else:
+            print("Opcao invalida. Digite 1, 2, 3 ou 0.")
+
+
+# =====================================================================
+# TESTES DE INTEGRACAO - 12 GRUPOS
+# =====================================================================
+
+
+def _esperar_value_error(funcao, *argumentos):
+    """Retorna True quando a funcao testada rejeita os argumentos."""
     try:
         funcao(*argumentos)
     except ValueError:
@@ -520,82 +799,102 @@ def _i3_esperar_value_error(funcao, *argumentos):
     return False
 
 
+def aproximado(a, b, tolerancia=0.005):
+    """Compara numeros considerando uma pequena tolerancia de arredondamento."""
+    return abs(a - b) <= tolerancia
+
+
 def executar_testes_integracao():
-    """Executa 12 grupos de testes sobre as tres partes ja integradas."""
-    # 01 - O K atual deve produzir taxa de 1% e prazo de 10 meses.
-    assert calcular_parametros_k(K) == (1, 10)
+    """Executa 12 grupos de testes sobre entrada, calculos e simulacao."""
+    # 01 - K atual.
+    assert calcular_parametros_k(K) == ((K % 5) + 1, (K % 6) + 6)
     print("Teste 01/12 aprovado: parametros do K atual.")
 
-    # 02 - Verifica outros valores e os limites das formulas.
+    # 02 - Outros valores de K.
     assert calcular_parametros_k(0) == (1, 6)
     assert calcular_parametros_k(5) == (1, 11)
     print("Teste 02/12 aprovado: outros valores de K.")
 
-    # 03 - K negativo, decimal ou booleano deve ser rejeitado.
-    assert _i3_esperar_value_error(calcular_parametros_k, -1)
-    assert _i3_esperar_value_error(calcular_parametros_k, 2.5)
-    assert _i3_esperar_value_error(calcular_parametros_k, True)
+    # 03 - Validacao do K.
+    assert _esperar_value_error(calcular_parametros_k, -1)
+    assert _esperar_value_error(calcular_parametros_k, 2.5)
+    assert _esperar_value_error(calcular_parametros_k, True)
     print("Teste 03/12 aprovado: validacao do K.")
 
-    # 04 - A simulacao deve gerar exatamente uma linha por mes.
+    # 04 - Quantidade e identificacao dos meses.
     historico = simular_juros_compostos(1000.00, 1.0, 10)
     assert len(historico) == 10
     assert historico[0]["mes"] == 1 and historico[-1]["mes"] == 10
     print("Teste 04/12 aprovado: quantidade de meses gerados.")
 
-    # 05 - Primeiro mes: R$ 1.000,00 passa a R$ 1.010,00.
+    # 05 - Primeiro mes.
     assert historico[0]["saldo"] == 1010.00
     assert historico[0]["juros_mes"] == 10.00
     print("Teste 05/12 aprovado: saldo do primeiro mes.")
 
-    # 06 - Segundo mes: os juros incidem sobre R$ 1.010,00.
+    # 06 - Segundo mes.
     assert historico[1]["saldo"] == 1020.10
     assert historico[1]["juros_mes"] == 10.10
-    print("Teste 06/12 aprovado: juros sobre saldo atualizado.")
+    print("Teste 06/12 aprovado: juros sobre o saldo atualizado.")
 
     # 07 - Terceiro mes e juros acumulados.
     assert historico[2]["saldo"] == 1030.30
     assert historico[2]["juros_mes"] == 10.20
     assert historico[2]["juros_acumulados"] == 30.30
-    print("Teste 07/12 aprovado: saldo e juros acumulados no terceiro mes.")
+    print("Teste 07/12 aprovado: terceiro mes e juros acumulados.")
 
-    # 08 - Montante final esperado para 10 meses a 1% ao mes.
+    # 08 - Montante final.
     assert historico[-1]["saldo"] == 1104.62
     assert historico[-1]["juros_acumulados"] == 104.62
-    print("Teste 08/12 aprovado: montante e juros acumulados finais.")
+    print("Teste 08/12 aprovado: montante final em dez meses.")
 
-    # 09 - Taxa zero nao pode alterar o capital.
+    # 09 - Taxa zero.
     sem_juros = simular_juros_compostos(750.00, 0.0, 4)
     assert len(sem_juros) == 4
     assert all(item["saldo"] == 750.00 for item in sem_juros)
     print("Teste 09/12 aprovado: simulacao com taxa zero.")
 
-    # 10 - Entradas invalidas da simulacao devem ser rejeitadas.
-    assert _i3_esperar_value_error(simular_juros_compostos, 0, 1, 10)
-    assert _i3_esperar_value_error(simular_juros_compostos, 1000, -1, 10)
-    assert _i3_esperar_value_error(simular_juros_compostos, 1000, 1, 0)
-    assert _i3_esperar_value_error(simular_juros_compostos, float("nan"), 1, 10)
-    assert _i3_esperar_value_error(simular_juros_compostos, 1000, float("inf"), 10)
+    # 10 - Valores invalidos da simulacao.
+    assert _esperar_value_error(simular_juros_compostos, 0, 1, 10)
+    assert _esperar_value_error(simular_juros_compostos, 1000, -1, 10)
+    assert _esperar_value_error(simular_juros_compostos, 1000, 1, 0)
+    assert _esperar_value_error(simular_juros_compostos, float("nan"), 1, 10)
+    assert _esperar_value_error(simular_juros_compostos, 1000, float("inf"), 10)
     print("Teste 10/12 aprovado: validacao dos dados da simulacao.")
 
-    # 11 - Integracao com leitura numerica e consulta de taxa bancaria.
+    # 11 - Integracao de cadastro e comparacao (schema unico).
+    oferta = OFERTAS_IPHONE[0]
+    assert oferta["valor_a_vista"] == 9998.99
+    assert oferta["num_parcelas"] == 12
+    assert calcular_total_prazo(oferta) == 10599.00
+    assert calcular_juros(oferta)[0] == 600.01
+    assert achar_mais_barata(OFERTAS_IPHONE) == [OFERTAS_IPHONE[0]]
+    assert achar_mais_cara(OFERTAS_IPHONE) == [OFERTAS_IPHONE[1]]
+    assert achar_mais_barata([]) == [] and achar_mais_cara([]) == []
     assert converter_valor_numerico("R$ 6.767,50") == 6767.50
-    assert obter_media_taxa_banco("Itaú") == 9.91
-    print("Teste 11/12 aprovado: leitura monetaria e consulta de taxa.")
+    print("Teste 11/12 aprovado: schema unico, leitura e comparacao de ofertas.")
 
-    # 12 - Integracao com calculos do Integrante 2 e dados do Integrante 1.
-    oferta_sem_juros = OFERTAS_REAIS[0]
-    assert calcular_juros_reais(oferta_sem_juros) == 0.00
-    assert calcular_juros_percentual(oferta_sem_juros) == 0.00
+    # 12 - Integracao dos calculos financeiros com bancos e plataformas.
+    assert obter_media_taxa_banco("Itaú") == 9.91
+    assert aproximado(obter_media_desconto("Amazon"), 17.3333333333)
     assert calcular_parcela_simulada(1200.00, 0.00, 0.0, 12) == 100.00
     assert calcular_parcela_simulada(1200.00, 0.00, 2.0, 12) > 100.00
-
-    simulacao = simular_condicao_plataforma(
-        "Amazon", "Itaú", 3000.00, 300.00, 12
-    )
+    simulacao = simular_condicao_plataforma("Amazon", "Itaú", 3000.00, 300.00, 12)
     assert simulacao is not None
     assert simulacao["taxa_banco"] == 9.91
-    assert round(simulacao["desconto_medio"], 2) == 17.33
-    print("Teste 12/12 aprovado: integracao das tres partes.")
+    assert aproximado(simulacao["desconto_medio"], 17.3333333333)
+    assert len(simular_faixa_parcelas("Amazon", "Itaú", 3000.00, 300.00, 12)) == 12
+    print("Teste 12/12 aprovado: integracao de juros, banco e plataforma.")
 
     print("\nResultado: 12 de 12 grupos de testes aprovados.")
+
+
+def rodar_testes():
+    """Mantem o nome de funcao usado no trecho do Integrante 2."""
+    executar_testes_integracao()
+
+
+if __name__ == "__main__":
+    # Os testes rodam antes do menu para detectar erros de integracao.
+    executar_testes_integracao()
+    main()

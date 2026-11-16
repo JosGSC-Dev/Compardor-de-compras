@@ -14,8 +14,8 @@ Restricoes atendidas: simulacao com for; sem bibliotecas financeiras,
 sem operador de potencia e sem pow().
 """
 
-# Use o valor calculado pelo grupo. No momento, o valor informado e K = 10.
-K = 10
+#No momento, o valor informado e K = 51.
+K = 51
 
 
 def _i3_numero_finito(valor):
