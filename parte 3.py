@@ -7,9 +7,19 @@ K do grupo: 10 (confirmar calculo com as matriculas e com o professor)
 
 OBJETIVO DO PRE-CODIGO
 1. Comparar ofertas reais previamente cadastradas (opcao 1).
-2. Simular um novo smartphone usando medias calculadas a partir de ofertas
-   pesquisadas em cada plataforma (opcao 2).
+2. Simular um smartphone informado pelo usuario (opcao 2), combinando:
+   - taxa mensal de referencia do banco/cartao escolhido;
+   - desconto medio no Pix da plataforma escolhida;
+   - preco-base, entrada e quantidade de parcelas informados pelo usuario.
 3. Fazer a simulacao academica de juros compostos definida pelo K (opcao 3).
+
+FONTE DAS TAXAS BANCARIAS
+As taxas cadastradas abaixo foram transcritas do Banco Central do Brasil,
+modalidade "Cartao de credito - parcelado - Prefixado", Pessoa Fisica,
+periodo de 09/10/2026 a 16/10/2026. Sao referencias estatisticas por instituicao,
+nao uma promessa da taxa individual oferecida a cada cliente/cartao.
+Fonte oficial:
+https://www.bcb.gov.br/estatisticas/reporttxjuroshistorico?InicioPeriodo=2024-01-&codigoModalidade=215101&codigoSegmento=1&historicotaxajurosdiario_page=1&tipoModalidade=D
 
 RESTRICOES ADOTADAS NESTE PRE-CODIGO
 - Nenhum import.
@@ -21,18 +31,17 @@ RESTRICOES ADOTADAS NESTE PRE-CODIGO
 IMPORTANTE SOBRE A OPCAO 1
 A leitura automatica de planilha ainda nao foi implementada, pois o grupo
 precisa confirmar com o professor se ela sera permitida. Por enquanto, os
-registros reais ficam na lista OFERTAS_REAIS. Se a planilha for autorizada,
-a funcao carregar_ofertas_reais() sera o ponto de integracao.
+registros reais ficam na lista OFERTAS_REAIS.
 
 IMPORTANTE SOBRE A OPCAO 2
-As listas AMOSTRAS_TAXAS e AMOSTRAS_DESCONTOS_PIX estao vazias de proposito.
-O grupo deve preencher cada lista com percentuais obtidos em pesquisas reais.
-Nao use taxas inventadas como se fossem taxas oficiais das plataformas.
+A taxa e selecionada pelo banco emissor informado pelo usuario, usando a
+referencia do Banco Central. O desconto Pix e selecionado pela plataforma.
+As listas de descontos devem ser validadas com evidencias reais do grupo.
+A simulacao e uma estimativa academica, nao substitui a taxa/CET do contrato.
 
-# [IA] Este pre-codigo foi estruturado com apoio de IA. O grupo deve revisar,
-# testar, compreender e adaptar todas as funcoes antes da entrega.
+# [IA] Este pre-codigo foi estruturado e atualizado com apoio de IA. O grupo
+# deve revisar, testar, compreender e adaptar todas as funcoes antes da entrega.
 """
-import csv
 
 K = 10
 
@@ -357,34 +366,62 @@ OFERTAS_REAIS = [
 ]
 
 # =====================================================================
-# 2. PARAMETROS DA PESQUISA PARA A OPCAO 2
-# =====================================================================
+# 2. PARAMETROS FINANCEIROS DA OPCAO 2 - TAXA POR BANCO, DESCONTO POR LOJA
 
-# [PESQUISA OBRIGATORIA]
-# Depois de pesquisar ofertas reais de cada plataforma, calcule a taxa mensal
-# implicita de CADA oferta. Coloque os resultados (em percentual) na lista.
-# Exemplo ficticio de preenchimento: "Amazon": [1.4, 1.8, 2.0]
-# NAO copie esses numeros de exemplo: use somente resultados calculados pelo grupo.
+# TAXAS DE REFERENCIA POR INSTITUICAO FINANCEIRA
+# Fonte: Banco Central do Brasil (BCB).
+# Modalidade: Cartao de credito - parcelado - Prefixado (Pessoa Fisica).
+# Periodo de referencia: 09/10/2026 a 16/10/2026.
+# Unidade: percentual ao mes (% a.m.).
+#
+# IMPORTANTE:
+# - Os nomes comerciais foram associados as instituicoes listadas pelo BCB.
+# - Nubank corresponde ao registro "NU FINANCEIRA S.A. CFI".
+# - A taxa publicada e uma media estatistica da modalidade, nao a taxa
+#   contratual garantida para todo cliente ou cartao dessa instituicao.
+# - Confirmar no cartao/contrato quem e o emissor da operacao.
+# - Para atualizar, consulte a mesma modalidade e registre o novo periodo.
+# Fonte oficial:
+# https://www.bcb.gov.br/estatisticas/reporttxjuroshistorico?InicioPeriodo=2024-01-&codigoModalidade=215101&codigoSegmento=1&historicotaxajurosdiario_page=1&tipoModalidade=D
 
-AMOSTRAS_TAXAS_MENSAIS = {
-    "Amazon": [],          # TODO: pesquisar e inserir taxas mensais reais estimadas.
-    "Magazine Luiza": [],  # TODO: pesquisar e inserir taxas mensais reais estimadas.
-    "Mercado Livre": []    # TODO: pesquisar e inserir taxas mensais reais estimadas.
+PERIODO_TAXAS_BCB = "09/10/2026 a 16/10/2026"
+MODALIDADE_TAXAS_BCB = "Cartao de credito - parcelado - Prefixado (Pessoa Fisica)"
+
+BANCOS_CARTAO = [
+    "Itaú",
+    "Nubank",
+    "Bradesco",
+    "Santander",
+    "Caixa Econômica Federal"
+]
+
+# Os valores estao em listas para permitir incluir observacoes de outros
+# periodos e calcular uma media simples, se essa for a metodologia escolhida.
+# Neste pre-codigo, cada banco possui uma observacao do periodo acima.
+# Valores consultados na tabela do BCB em 16/11/2026:
+# Bradesco: 9,02%; Nu Financeira: 9,06%; Itau: 9,91%;
+# Santander: 10,16%; Caixa: 8,62% ao mes.
+AMOSTRAS_TAXAS_MENSAIS_BANCO = {
+    "Itaú": [9.91],
+    "Nubank": [9.06],
+    "Bradesco": [9.02],
+    "Santander": [10.16],
+    "Caixa Econômica Federal": [8.62]
 }
 
+# DESCONTOS MEDIOS POR PLATAFORMA
 # [PESQUISA OBRIGATORIA]
-# Para cada oferta em que o preco-base no cartao e o preco Pix sejam confirmados,
-# calcule o desconto percentual: (B - preco_pix) / B * 100.
-# Insira os percentuais observados na plataforma correspondente.
-# Exemplo ficticio de preenchimento: "Amazon": [5.0, 4.0, 6.0]
-
+# Os percentuais abaixo foram informados pelo grupo no rascunho.
+# Antes da entrega, confirmem que cada desconto foi calculado comparando
+# preco-base no cartao e preco Pix da MESMA oferta, vendedor e variante.
+# Formula: (preco_base - preco_pix) / preco_base * 100.
+# Removam amostras sem print, link, data ou preco-base confirmado.
 AMOSTRAS_DESCONTOS_PIX = {
-    "Amazon": [],          # TODO: pesquisar e inserir descontos Pix observados.
-    "Magazine Luiza": [],  # TODO: pesquisar e inserir descontos Pix observados.
-    "Mercado Livre": []    # TODO: pesquisar e inserir descontos Pix observados.
+    "Amazon": [19.0, 9.0, 24.0],
+    "Magazine Luiza": [21.0, 15.0, 10.0],
+    "Mercado Livre": [22.0, 20.0, 15.0]
 }
 
-# =====================================================================
 # 3. FUNCOES DE ENTRADA E FORMATACAO
 # =====================================================================
 
@@ -645,7 +682,7 @@ def exibir_comparacao_real(ofertas_modelo):
 # =====================================================================
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
+# Autor: [Nome do integrante responsavel]
 def calcular_media(valores):
     """Calcula a media aritmetica usando acumulador e laco for."""
     if len(valores) == 0:
@@ -657,15 +694,39 @@ def calcular_media(valores):
 
 
 # Autor: [Nome do integrante responsavel]
-def obter_media_taxa(plataforma):
-    """Retorna a taxa mensal media pesquisada para uma plataforma."""
-    return calcular_media(AMOSTRAS_TAXAS_MENSAIS[plataforma])
+def obter_media_taxa_banco(banco):
+    """Retorna a taxa mensal de referencia do banco selecionado."""
+    if banco not in AMOSTRAS_TAXAS_MENSAIS_BANCO:
+        return None
+    return calcular_media(AMOSTRAS_TAXAS_MENSAIS_BANCO[banco])
 
 
 # Autor: [Nome do integrante responsavel]
 def obter_media_desconto(plataforma):
     """Retorna o desconto medio Pix pesquisado para uma plataforma."""
+    if plataforma not in AMOSTRAS_DESCONTOS_PIX:
+        return None
     return calcular_media(AMOSTRAS_DESCONTOS_PIX[plataforma])
+
+
+# Autor: [Nome do integrante responsavel]
+def selecionar_banco_cartao():
+    """Apresenta bancos disponiveis e recebe o emissor do cartao do usuario."""
+    print("\nSELECIONE O BANCO/EMISSOR DO CARTAO")
+    for indice in range(len(BANCOS_CARTAO)):
+        print(str(indice + 1) + " - " + BANCOS_CARTAO[indice])
+    escolha = ler_inteiro("Banco do cartao: ", 1, len(BANCOS_CARTAO))
+    return BANCOS_CARTAO[escolha - 1]
+
+
+# Autor: [Nome do integrante responsavel]
+def selecionar_plataforma():
+    """Apresenta as plataformas e recebe a loja desejada pelo usuario."""
+    print("\nSELECIONE A PLATAFORMA DE COMPRA")
+    for indice in range(len(PLATAFORMAS)):
+        print(str(indice + 1) + " - " + PLATAFORMAS[indice])
+    escolha = ler_inteiro("Plataforma: ", 1, len(PLATAFORMAS))
+    return PLATAFORMAS[escolha - 1]
 
 
 # Autor: [Nome do integrante responsavel]
@@ -756,21 +817,24 @@ def calcular_parcela_simulada(preco_base, entrada, taxa_percentual, parcelas):
 
 
 # Autor: [Nome do integrante responsavel]
-def simular_condicao_plataforma(plataforma, preco_base, entrada, parcelas):
-    """Calcula Pix e financiamento usando medias pesquisadas da plataforma."""
-    taxa_media = obter_media_taxa(plataforma)
+def simular_condicao_plataforma(plataforma, banco, preco_base, entrada, parcelas):
+    """Simula uma compra usando taxa do banco e desconto da plataforma."""
+    taxa_banco = obter_media_taxa_banco(banco)
     desconto_medio = obter_media_desconto(plataforma)
 
-    if taxa_media is None:
+    if taxa_banco is None:
         return None
 
-    valor_parcela = calcular_parcela_simulada(preco_base, entrada, taxa_media, parcelas)
+    valor_parcela = calcular_parcela_simulada(
+        preco_base, entrada, taxa_banco, parcelas
+    )
     total_parcelado = round(entrada + valor_parcela * parcelas, 2)
     preco_pix = calcular_preco_pix(preco_base, desconto_medio)
 
     return {
         "plataforma": plataforma,
-        "taxa_media": taxa_media,
+        "banco": banco,
+        "taxa_banco": taxa_banco,
         "desconto_medio": desconto_medio,
         "preco_pix": preco_pix,
         "valor_parcela": valor_parcela,
@@ -779,46 +843,56 @@ def simular_condicao_plataforma(plataforma, preco_base, entrada, parcelas):
         "diferenca_vs_pix": None if preco_pix is None else round(total_parcelado - preco_pix, 2)
     }
 
-
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
-def simular_faixa_parcelas(plataforma, preco_base, entrada, limite_parcelas, limite_mensal):
-    """Mostra prazos de 1 ate o limite e identifica o primeiro que cabe no orcamento."""
-    taxa_media = obter_media_taxa(plataforma)
+# Autor: [Nome do integrante responsavel]
+def simular_faixa_parcelas(plataforma, banco, preco_base, entrada, limite_parcelas, limite_mensal):
+    """Compara varios prazos usando o banco escolhido e uma plataforma."""
+    taxa_banco = obter_media_taxa_banco(banco)
     desconto_medio = obter_media_desconto(plataforma)
-    if taxa_media is None:
-        print("Sem taxa media cadastrada para", plataforma, "- preencher AMOSTRAS_TAXAS_MENSAIS.")
+
+    if taxa_banco is None:
+        print("Sem taxa de referencia cadastrada para", banco)
+        return []
+
+    if desconto_medio is None:
+        print("Sem amostras de desconto Pix cadastradas para", plataforma)
         return []
 
     resultados = []
-    print("\nPLATAFORMA:", plataforma, "| Taxa media pesquisada:", formatar_percentual(taxa_media))
+    preco_pix = calcular_preco_pix(preco_base, desconto_medio)
+
+    print("\nBANCO/EMISSOR:", banco)
+    print("Taxa mensal de referencia BCB:", formatar_percentual(taxa_banco))
+    print("Periodo BCB:", PERIODO_TAXAS_BCB)
+    print("PLATAFORMA:", plataforma)
+    print("Desconto Pix medio da amostra:", formatar_percentual(desconto_medio))
+    print("Preco estimado no Pix:", formatar_moeda(preco_pix))
+    print("\nCOMPARACAO DOS PRAZOS")
     print(f"{'Parcelas':>9} {'Valor mensal':>18} {'Total parcelado':>20} {'Diferenca vs Pix':>19}")
     print("-" * 75)
 
     for quantidade in range(1, limite_parcelas + 1):
-        parcela = calcular_parcela_simulada(preco_base, entrada, taxa_media, quantidade)
+        parcela = calcular_parcela_simulada(
+            preco_base, entrada, taxa_banco, quantidade
+        )
         total = round(entrada + parcela * quantidade, 2)
-        pix = calcular_preco_pix(preco_base, desconto_medio)
-        diferenca_pix = None if pix is None else round(total - pix, 2)
+        diferenca_pix = round(total - preco_pix, 2)
+
         registro = {
             "plataforma": plataforma,
+            "banco": banco,
             "parcelas": quantidade,
             "parcela": parcela,
             "total": total,
-            "preco_pix": pix,
+            "preco_pix": preco_pix,
             "diferenca_pix": diferenca_pix,
             "cabe_orcamento": limite_mensal <= 0 or parcela <= limite_mensal
         }
         resultados.append(registro)
-        texto_diferenca = "Nao calculada" if diferenca_pix is None else formatar_moeda(diferenca_pix)
+
         print(
             f"{quantidade:>9} {formatar_moeda(parcela):>18} "
-            f"{formatar_moeda(total):>20} {texto_diferenca:>19}"
+            f"{formatar_moeda(total):>20} {formatar_moeda(diferenca_pix):>19}"
         )
-
-    if desconto_medio is None:
-        print("Desconto Pix medio nao cadastrado para esta plataforma.")
-    else:
-        print("Desconto Pix medio da amostra:", formatar_percentual(desconto_medio))
 
     if limite_mensal > 0:
         primeiro_compativel = None
@@ -830,124 +904,82 @@ def simular_faixa_parcelas(plataforma, preco_base, entrada, limite_parcelas, lim
             print("Nenhum prazo analisado cabe no limite mensal informado.")
         else:
             print(
-                "Primeiro prazo que cabe no limite mensal: ",
+                "Primeiro prazo que cabe no orcamento:",
                 primeiro_compativel["parcelas"], "parcelas; parcela de",
                 formatar_moeda(primeiro_compativel["parcela"]),
                 "e total de", formatar_moeda(primeiro_compativel["total"])
             )
+
     return resultados
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
-
-# Autor: [Seu nome]
+# Autor: [Nome do integrante responsavel]
 def executar_simulacao_avulsa():
-    """Simula uma compra independente da base de ofertas reais."""
-
-    print("\nSIMULACAO AVULSA DE SMARTPHONE")
-
-    # 1. Receber os dados do aparelho
-    modelo = ler_texto("Nome do smartphone: ")
-
-    preco_base = ler_float(
-        "Preco-base no cartao (R$): ", 0.0, False
-    )
-
-    entrada = ler_float(
-        "Valor da entrada (R$): ", 0.0, True
-    )
+    """Simula smartphone livre usando banco escolhido e loja escolhida."""
+    print("\nSIMULACAO AVULSA - TAXA DO BANCO + DESCONTO DA PLATAFORMA")
+    modelo = ler_texto("Nome/modelo do smartphone: ")
+    preco_base = ler_float("Preco-base normal no cartao (R$): ", 0.0, False)
+    entrada = ler_float("Entrada (R$; digite 0 se nao houver): ", 0.0, True)
 
     if entrada >= preco_base:
         print("A entrada deve ser menor que o preco-base.")
         return
 
-    # 2. Permitir escolher somente uma plataforma
-    print("\nESCOLHA A PLATAFORMA")
-
-    for indice in range(len(PLATAFORMAS)):
-        print(indice + 1, "-", PLATAFORMAS[indice])
-
-    escolha = ler_inteiro(
-        "Escolha a loja: ", 1, len(PLATAFORMAS)
+    banco = selecionar_banco_cartao()
+    plataforma = selecionar_plataforma()
+    limite_parcelas = ler_inteiro(
+        "Quantidade maxima de parcelas a analisar (1 a 48): ", 1, 48
+    )
+    limite_mensal = ler_float(
+        "Limite que pode pagar por mes (0 se nao quiser filtrar): R$ ",
+        0.0,
+        True
     )
 
-    plataforma = PLATAFORMAS[escolha - 1]
+    print("\nProduto:", modelo)
+    print("Preco-base B:", formatar_moeda(preco_base))
+    print("Entrada:", formatar_moeda(entrada))
+    print("Banco selecionado:", banco)
+    print("Plataforma selecionada:", plataforma)
+    print("Prazos analisados: de 1 ate", limite_parcelas, "parcelas")
 
-    # 3. Receber a quantidade exata de parcelas
-    parcelas = ler_inteiro(
-        "Quantidade de parcelas: ", 1, 48
+    resultados = simular_faixa_parcelas(
+        plataforma, banco, preco_base, entrada,
+        limite_parcelas, limite_mensal
     )
 
-    print("\nPROCESSANDO SIMULACAO...")
-
-    # 4. Calcular usando a media pesquisada da loja
-    resultado = simular_condicao_plataforma(
-        plataforma,
-        preco_base,
-        entrada,
-        parcelas
-    )
-
-    if resultado is None:
-        print("\nTaxa media ainda nao cadastrada para esta loja.")
-        print("Preencha AMOSTRAS_TAXAS_MENSAIS no codigo.")
+    if len(resultados) == 0:
+        print("Simulacao nao realizada. Verifique as taxas e descontos cadastrados.")
         return
 
-    # 5. Apresentar os resultados
-    print("\n" + "=" * 55)
-    print("RESULTADO DA SIMULACAO")
-    print("=" * 55)
+    menor_total = resultados[0]
+    menor_parcela = resultados[0]
 
-    print("Smartphone:", modelo)
-    print("Plataforma:", plataforma)
-    print("Preco-base:", formatar_moeda(preco_base))
-    print("Entrada:", formatar_moeda(entrada))
-    print("Capital financiado:", formatar_moeda(preco_base - entrada))
+    for registro in resultados[1:]:
+        if registro["total"] < menor_total["total"]:
+            menor_total = registro
+        if registro["parcela"] < menor_parcela["parcela"]:
+            menor_parcela = registro
 
+    print("\nMENOR CUSTO TOTAL ENTRE OS PRAZOS ANALISADOS:")
     print(
-        "Taxa mensal estimada:",
-        formatar_percentual(resultado["taxa_media"])
+        menor_total["parcelas"], "parcelas de",
+        formatar_moeda(menor_total["parcela"]),
+        "- total", formatar_moeda(menor_total["total"])
+    )
+    print("MENOR PRESTACAO MENSAL:")
+    print(
+        menor_parcela["parcelas"], "parcelas de",
+        formatar_moeda(menor_parcela["parcela"]),
+        "- total", formatar_moeda(menor_parcela["total"])
     )
 
-    print("Quantidade de parcelas:", parcelas)
-
-    print(
-        "Valor de cada parcela:",
-        formatar_moeda(resultado["valor_parcela"])
-    )
-
-    print(
-        "Total parcelado:",
-        formatar_moeda(resultado["total_parcelado"])
-    )
-
-    print(
-        "Juros/acrescimo estimado:",
-        formatar_moeda(resultado["acrescimo_sobre_base"])
-    )
-
-    print(
-        "Percentual de acrescimo:",
-        formatar_percentual(
-            resultado["acrescimo_sobre_base"] / preco_base * 100
-        )
-    )
-
-    if resultado["preco_pix"] is not None:
-        print(
-            "Preco estimado no Pix:",
-            formatar_moeda(resultado["preco_pix"])
-        )
-
-        print(
-            "Diferenca entre parcelado e Pix:",
-            formatar_moeda(resultado["diferenca_vs_pix"])
-        )
-    else:
-        print("Desconto Pix medio ainda nao cadastrado.")
-
-    print("=" * 55)
-    print("Simulacao baseada nas medias da pesquisa do grupo.")
+    print("\nObservacoes metodologicas:")
+    print("- A taxa e uma referencia media do BCB para a instituicao selecionada.")
+    print("- A taxa real do contrato/cartao pode ser diferente.")
+    print("- O desconto Pix e a media das ofertas pesquisadas na plataforma.")
+    print("- A menor parcela mensal nao significa o menor custo total.")
+    print("- Para comparar outra loja, repita a opcao 2 e altere a plataforma.")
 
 
 # =====================================================================
@@ -955,7 +987,7 @@ def executar_simulacao_avulsa():
 # =====================================================================
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
+# Autor: [Nome do integrante responsavel]
 def calcular_parametros_k(k):
     """Calcula taxa mensal e prazo conforme as formulas do professor."""
     if not isinstance(k, int) or k < 0:
@@ -965,7 +997,7 @@ def calcular_parametros_k(k):
     return taxa, meses
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
+# Autor: [Nome do integrante responsavel]
 def simular_juros_compostos(valor, taxa, meses):
     """Simula juros compostos com for, sem operador de potencia ou pow()."""
     if valor <= 0:
@@ -991,7 +1023,7 @@ def simular_juros_compostos(valor, taxa, meses):
     return resultados
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
+# Autor: [Nome do integrante responsavel]
 def executar_projecao_k():
     """Solicita smartphone e capital, aplicando somente taxa e prazo do K."""
     print("\nPROJECAO HIPOTETICA COM K")
@@ -1024,20 +1056,20 @@ def executar_projecao_k():
 # =====================================================================
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
+# Autor: [Nome do integrante responsavel]
 def exibir_menu():
     """Mostra as quatro opcoes principais do sistema."""
     print("\n" + "=" * 66)
     print("COMPARADOR DE OFERTAS DE SMARTPHONES - PROJETO 15")
     print("=" * 66)
     print("1 - Comparar ofertas reais cadastradas (planilha futura)")
-    print("2 - Simular parcelamento avulso com medias pesquisadas")
+    print("2 - Simular parcelamento avulso (banco + plataforma)")
     print("3 - Fazer projecao hipotetica com K")
     print("0 - Sair")
     print("=" * 66)
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
+# Autor: [Nome do integrante responsavel]
 def executar_comparacao_real():
     """Executa a opcao 1 usando a base de ofertas reais cadastradas."""
     ofertas = carregar_ofertas_reais()
@@ -1049,7 +1081,7 @@ def executar_comparacao_real():
     exibir_comparacao_real(ofertas_modelo)
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
+# Autor: [Nome do integrante responsavel]
 def main():
     """Controla o menu principal ate o usuario escolher sair."""
     while True:
@@ -1073,7 +1105,7 @@ def main():
 # =====================================================================
 
 
-# Autor: [JOSUÉ GABRIEL SOUSA CUNHA]
+# Autor: [Nome do integrante responsavel]
 def executar_testes_basicos():
     """Executa verificacoes simples das funcoes matematicas do pre-codigo."""
     # Teste do K = 10: taxa 1% e prazo 10 meses.
@@ -1094,9 +1126,29 @@ def executar_testes_basicos():
     parcela_com_juros = calcular_parcela_simulada(1200.00, 0.00, 2.0, 12)
     assert parcela_com_juros * 12 > 1200.00
 
-    # Teste da taxa implicita
+    # Teste da taxa implicita: R$ 1.000 financiados em 10 parcelas de R$ 110.
     taxa_estimada = calcular_taxa_implicita(1000.00, 0.00, 10, 110.00)
     assert taxa_estimada is not None and taxa_estimada > 0
+
+    # Teste das taxas bancarias transcritas do BCB.
+    assert obter_media_taxa_banco("Bradesco") == 9.02
+    assert obter_media_taxa_banco("Nubank") == 9.06
+    assert obter_media_taxa_banco("Itaú") == 9.91
+    assert obter_media_taxa_banco("Santander") == 10.16
+    assert obter_media_taxa_banco("Caixa Econômica Federal") == 8.62
+
+    # Teste das medias de descontos informadas pelo grupo.
+    assert round(obter_media_desconto("Amazon"), 2) == 17.33
+    assert round(obter_media_desconto("Magazine Luiza"), 2) == 15.33
+    assert round(obter_media_desconto("Mercado Livre"), 2) == 19.00
+
+    # Teste de simulacao avulsa: taxa do banco e desconto da loja sao separados.
+    teste_avulso = simular_condicao_plataforma(
+        "Amazon", "Itaú", 3000.00, 300.00, 12
+    )
+    assert teste_avulso is not None
+    assert teste_avulso["taxa_banco"] == 9.91
+    assert round(teste_avulso["desconto_medio"], 2) == 17.33
 
     print("Todos os testes basicos foram aprovados.")
 
