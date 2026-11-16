@@ -69,7 +69,7 @@ AMOSTRAS_DESCONTOS_PIX = {
 
 
 # =====================================================================
-# INTEGRANTE 1 - ENTRADA DE DADOS, VALIDACAO E CADASTRO
+# INTEGRANTE 1 - ENTRADA DE DADOS, VALIDACAO E CADASTRO (PEDRO VITOR
 # =====================================================================
 
 
@@ -284,7 +284,7 @@ OFERTAS_REAIS = OFERTAS_IPHONE + OFERTAS_POCO_C85 + OFERTAS_Z_FLIP8
 
 
 # =====================================================================
-# INTEGRANTE 2 - CALCULOS FINANCEIROS E COMPARACAO DE OFERTAS
+# INTEGRANTE 2 - CALCULOS FINANCEIROS E COMPARACAO DE OFERTAS (EDUARDO SOARES)
 # =====================================================================
 
 
@@ -528,7 +528,7 @@ def selecionar_plataforma():
 
 
 # =====================================================================
-# INTEGRANTE 3 - JUROS COMPOSTOS, TESTES E INTEGRACAO
+# INTEGRANTE 3 - JUROS COMPOSTOS, TESTES E INTEGRACAO(JOSUÉ GABRIEL)
 # =====================================================================
 
 
@@ -605,7 +605,7 @@ def executar_projecao_k():
 
 
 # =====================================================================
-# OPCOES DO MENU PRINCIPAL
+# OPCOES DO MENU PRINCIPAL (IA-REVISADO PELO GRUPO)
 # =====================================================================
 
 
@@ -786,7 +786,7 @@ def main():
 
 
 # =====================================================================
-# TESTES DE INTEGRACAO - 12 GRUPOS
+# TESTES DE INTEGRACAO - 12 GRUPOS (TESTES DE VALIDAÇÃO EM GRUPO)
 # =====================================================================
 
 
