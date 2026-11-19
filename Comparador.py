@@ -69,7 +69,7 @@ AMOSTRAS_DESCONTOS_PIX = {
 
 
 # =====================================================================
-# INTEGRANTE 1 - ENTRADA DE DADOS, VALIDACAO E CADASTRO (PEDRO VITOR
+# INTEGRANTE 1 - ENTRADA DE DADOS, VALIDACAO E CADASTRO (PEDRO VITOR)
 # =====================================================================
 
 
@@ -82,7 +82,7 @@ def ler_texto(mensagem):
         print("O campo nao pode ficar vazio.")
 
 
-def converter_valor_numerico(texto):
+def converter_valor_numerico(texto): #[IA]
     """Converte valores como 'R$ 1.234,56', '1234,56' ou '1234.56'."""
     if isinstance(texto, (int, float)) and not isinstance(texto, bool):
         valor = float(texto)
