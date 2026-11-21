@@ -189,7 +189,7 @@ def criar_oferta(loja, produto, valor_a_vista, parcelas, valor_parcela,
     }
 
 
-def validar_oferta(oferta):
+def validar_oferta(oferta): #[IA]
     """Valida os campos financeiros de uma oferta cadastrada."""
     campos = ["loja", "produto", "valor_a_vista", "entrada",
               "num_parcelas", "valor_parcela"]
